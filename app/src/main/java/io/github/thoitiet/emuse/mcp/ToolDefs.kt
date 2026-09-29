@@ -84,7 +84,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
             "\"action\":{\"type\":\"string\",\"enum\":[\"play\",\"pause\",\"play_pause\",\"next\",\"previous\",\"stop\"]}",
             "\"action\"",
         ),
-        false, false, true, false, "write", "media.control",
+        false, false, false, false, "write", "media.control",
     ),
     ToolDef(
         "set_alarm",
