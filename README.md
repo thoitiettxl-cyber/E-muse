@@ -90,7 +90,7 @@ curl -s https://<tunnel-url-của-bạn>/health
 # {"ok":true,"mode":"direct"}
 ```
 
-## Danh sách tools (49)
+## Danh sách tools (67)
 
 | Tool | Loại | Mô tả |
 |---|---|---|
@@ -142,6 +142,24 @@ curl -s https://<tunnel-url-của-bạn>/health
 | `ui_snapshot` | query | Danh sách element gọn nhẹ (id `e0…`, text, bounds) cho automation |
 | `observe_screen` | query | Composite 1 call: UI tree + screenshot optional (image block) |
 | `wait_for_text` | query | **Đợi text xuất hiện** (device poll, 1 call) |
+| `search_contacts` | query | Tìm danh bạ theo tên (cần READ_CONTACTS) |
+| `search_call_history` | query | Tìm lịch sử cuộc gọi theo số/tên (cần READ_CALL_LOG) |
+| `search_messages` | query | Tìm SMS theo người gửi/nội dung (cần READ_SMS) |
+| `search_calendar_events` | query | Tìm sự kiện lịch (cần READ_CALENDAR) |
+| `search_media` | query | Tìm ảnh/video trong MediaStore (cần READ_MEDIA_*) |
+| `search_audio` | query | Tìm file audio theo tiêu đề/nghệ sĩ (cần READ_MEDIA_AUDIO) |
+| `search_recordings` | query | Tìm bản ghi âm/ghi cuộc gọi (cần READ_MEDIA_AUDIO) |
+| `search_files` | query | Tìm tài liệu/file trong MediaStore (cần READ_MEDIA_*) |
+| `search_downloads` | query | Tìm file trong Downloads (cần READ_MEDIA_*) |
+| `get_current_location` | query | Vị trí hiện tại/last-known (cần ACCESS_FINE_LOCATION) |
+| `recent_app_activity` | query | App mới dùng gần đây (cần Usage access trong Settings) |
+| `app_usage_summary` | query | Tổng hợp thời gian dùng app (cần Usage access) |
+| `recent_notifications` | query | Notification đang active (cần root) |
+| `wifi_credentials` | query | Wi-Fi đã lưu: ssid + password (cần root) |
+| `read_sms_code` | query | Mã OTP từ SMS gần đây (cần READ_SMS) |
+| `get_logcat` | query | Đọc logcat (cần root) |
+| `get_setting` | query | Đọc setting system/secure/global |
+| `get_device_environment` | query | Màn hình/khóa, ringer, DND, audio output, display |
 | `tool_flags` | query | Bật/tắt từng tool (không bao giờ bị tắt) |
 
 Mọi tool (trừ `device_list`) nhận `deviceId` tùy chọn — bỏ trống khi chỉ có

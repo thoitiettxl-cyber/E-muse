@@ -1,4 +1,4 @@
-# MCP Tools E-Muse (49)
+# MCP Tools E-Muse (67)
 
 Mọi tool (trừ `device_list`, `tool_flags`) đều có `deviceId` optional —
 bắt buộc khi có nhiều máy cùng kết nối.
@@ -53,6 +53,24 @@ bắt buộc khi có nhiều máy cùng kết nối.
 | `ui_snapshot` | query | - | **List element gọn kiểu Eta/E-Jev** (id, text, desc, bounds) — cần accessibility; dùng id với `input_tap` thay vì đoán tọa độ |
 | `observe_screen` | query | - | **Composite 1 call**: UI tree (`observation_id` + elements, `max_nodes` 1–120) + screenshot optional (image block) |
 | `wait_for_text` | query | - | **Đợi text xuất hiện** (poll 350ms phía device, 1 call) — thay N turn poll thủ công |
+| `search_contacts` | query | - | Tìm danh bạ theo tên (display name, lookup key, phone flag). Cần READ_CONTACTS |
+| `search_call_history` | query | - | Tìm lịch sử cuộc gọi theo số/tên (date, duration, type). Cần READ_CALL_LOG |
+| `search_messages` | query | - | Tìm SMS theo người gửi/nội dung (body cắt 1000 ký tự). Cần READ_SMS |
+| `search_calendar_events` | query | - | Tìm sự kiện lịch theo tiêu đề/mô tả/địa điểm. Cần READ_CALENDAR |
+| `search_media` | query | - | Tìm ảnh/video trong MediaStore theo tên file/path. Cần READ_MEDIA_IMAGES/READ_MEDIA_VIDEO (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
+| `search_audio` | query | - | Tìm audio theo tiêu đề/nghệ sĩ/path (album, duration). Cần READ_MEDIA_AUDIO (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
+| `search_recordings` | query | - | Tìm bản ghi âm/ghi cuộc gọi (lọc path `*Record*`). Cần READ_MEDIA_AUDIO (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
+| `search_files` | query | - | Tìm tài liệu/file chung trong MediaStore. Cần một quyền READ_MEDIA_* (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
+| `search_downloads` | query | - | Tìm file trong Downloads (API 29+). Cần một quyền READ_MEDIA_* (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
+| `get_current_location` | query | - | Vị trí last-known (lat/lon làm tròn ~10m, accuracy_m, age_s). Cần ACCESS_FINE_LOCATION (hoặc COARSE) |
+| `recent_app_activity` | query | - | App mới foreground gần đây (package, app name, activity, resumed_at). Cần Usage access (Settings → Special app access → Usage access) |
+| `app_usage_summary` | query | - | Tổng hợp foreground_ms/last_used_at theo app, giảm dần. Cần Usage access |
+| `recent_notifications` | query | - | Notification đang active (package, title, text) qua root `cmd notification`. Không cần manifest permission |
+| `wifi_credentials` | query | - | Wi-Fi đã lưu (ssid, password) từ WifiConfigStore.xml qua root. Không cần manifest permission |
+| `read_sms_code` | query | - | Mã OTP 4–8 chữ số từ SMS gần đây khớp từ khóa verification/OTP (trả code + sender, không trả body). Cần READ_SMS |
+| `get_logcat` | query | - | Logcat `-d -v threadtime` qua root (max_lines 20–500). Không cần manifest permission |
+| `get_setting` | query | - | Đọc 1 setting (namespace system/secure/global), fallback root `settings get` khi public API trả null |
+| `get_device_environment` | query | - | Môi trường máy: interactive/locked, ringer mode, DND filter, audio outputs, số display. Không cần permission |
 | `tool_flags` | query | - | **Xem/bật/tắt tool** — luôn khả dụng, không tắt được chính nó |
 
 Mỗi `ui_snapshot` trả `observation_id` (tăng đơn điệu: `o1`, `o2`, ...).
@@ -93,10 +111,37 @@ Hai nhóm nhạy cảm mặc định TẮT; bật trong app (mục "Quyền tool
 |---|---|---|
 | `terminal_file` | Bật | `shell_exec`, `file_list`, `file_pull`, `file_push`, `file_delete` |
 | `device_direct` | Bật | `device_list`, `device_info`, `device_status`, `network_info`, `get_volume`, `set_volume`, `media_control`, `set_alarm`, `set_timer`, `list_alarms`, `top_memory_apps`, `top_storage_apps`, `app_list`, `app_info`, `wait`, `wait_for_text`, `wait_for_package` |
-| `sensitive_read` | Tắt | `get_current_context`, `set_clipboard`, `get_clipboard`, `screen_capture`, `ui_dump`, `ui_snapshot`, `observe_screen` |
+| `sensitive_read` | Tắt | `get_current_context`, `set_clipboard`, `get_clipboard`, `screen_capture`, `ui_dump`, `ui_snapshot`, `observe_screen`, `search_contacts`, `search_call_history`, `search_messages`, `search_calendar_events`, `search_media`, `search_audio`, `search_recordings`, `search_files`, `search_downloads`, `get_current_location`, `recent_app_activity`, `app_usage_summary`, `recent_notifications`, `wifi_credentials`, `read_sms_code`, `get_logcat`, `get_setting`, `get_device_environment` |
 | `sensitive_action` | Tắt | `app_install`, `app_uninstall`, `app_start`, `app_stop`, `open_uri`, `input_tap`, `tap_and_observe`, `input_swipe`, `tap_area`, `long_press`, `long_press_element`, `scroll`, `scroll_element`, `input_key`, `input_text`, `replace_text`, `clear_text`, `paste_text`, `open_system_panel` |
 
 Tool chưa gán nhóm (không nên xảy ra) bị chặn mặc định (fail-closed).
+
+## Bảng permission Android (P5 audit)
+
+Mọi permission dùng bởi tool đã khai báo trong `AndroidManifest.xml`.
+Tool thiếu runtime permission **không tự xin giữa MCP call** — trả lỗi
+`PERMISSION_REQUIRED` kèm tên permission và hướng dẫn cấp trong Settings.
+
+| Tool | Permission | Loại |
+|---|---|---|
+| `search_contacts` | `READ_CONTACTS` | dangerous (runtime) |
+| `search_call_history` | `READ_CALL_LOG` | dangerous (runtime) |
+| `search_messages`, `read_sms_code` | `READ_SMS` | dangerous (runtime) |
+| `search_calendar_events` | `READ_CALENDAR` | dangerous (runtime) |
+| `search_media` | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` (API 33+); `READ_EXTERNAL_STORAGE` (`maxSdkVersion=32`) | dangerous (runtime) |
+| `search_audio`, `search_recordings` | `READ_MEDIA_AUDIO` (API 33+); `READ_EXTERNAL_STORAGE` (`maxSdkVersion=32`) | dangerous (runtime) |
+| `search_files`, `search_downloads` | một trong `READ_MEDIA_*` (API 33+); `READ_EXTERNAL_STORAGE` (`maxSdkVersion=32`) | dangerous (runtime) |
+| `get_current_location` | `ACCESS_FINE_LOCATION` (chấp nhận `ACCESS_COARSE_LOCATION`) | dangerous (runtime) |
+| `recent_app_activity`, `app_usage_summary` | `PACKAGE_USAGE_STATS` | special app-op — cấp trong Settings → Special app access → Usage access (lỗi `USAGE_ACCESS_REQUIRED` khi chưa cấp) |
+| `recent_notifications` | (không) — root `cmd notification` | root-only |
+| `wifi_credentials` | (không) — root đọc `WifiConfigStore.xml` | root-only |
+| `get_logcat` | (không) — root `logcat -d` (`READ_LOGS` là signature permission, không dùng) | root-only |
+| `get_setting` | (không) — public Settings API + root `settings get` fallback | không cần permission đọc mới |
+| `get_device_environment` | (không) — `AudioManager`/`PowerManager`/`KeyguardManager`/`NotificationManager`/`DisplayManager` API thông thường | không cần permission mới |
+
+Defer sang P7: các tool đọc private provider của ColorOS (notes, recordings,
+memories) và private health database — cần OEM provider, không port bằng
+cách đoán.
 
 ## Gợi ý preset
 
