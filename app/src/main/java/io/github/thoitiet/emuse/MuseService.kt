@@ -208,7 +208,7 @@ class MuseService : Service() {
         NotificationCompat.Builder(this, "emuse")
             .setContentTitle("E-Muse")
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
             .setOngoing(true)
             .build()
 

@@ -233,5 +233,5 @@ fun groupBlockReason(toolName: String, isEnabled: (ToolGroup) -> Boolean): Strin
         ?: return "Tool \"$toolName\" is not assigned to a permission group and is blocked."
     if (isEnabled(group)) return null
     return "Tool \"$toolName\" is in group \"${group.title}\" which is disabled. " +
-        "Enable it in the E-muse app (section \"Quyền tool\") to use this tool."
+        "Enable it in the E-Muse app (section \"Quyền tool\") to use this tool."
 }
