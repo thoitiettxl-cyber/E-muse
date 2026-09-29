@@ -75,6 +75,11 @@ class TunnelManager(
     // (stop()/killProc()) — must be volatile for visibility.
     @Volatile
     private var proc: Process? = null
+    // PID (trên /proc) của process tunnel hiện tại — resolve lúc spawn vì
+    // java.lang.Process.pid() là API Java 9+, không có trong Android SDK.
+    // Ghi trên IO thread, đọc trên main thread (stop()/killProc()) -> volatile.
+    @Volatile
+    private var procPid: Long? = null
     private var supervisor: Job? = null
     private var wantRunning = false
     // BL1: bumped on every stop()/restart so a stale supervisor blocked in
@@ -410,16 +415,58 @@ class TunnelManager(
         return out
     }
 
-    private fun writePid(p: Process) {
-        runCatching { pidFile().writeText(p.pid().toString()) }
+    /**
+     * PID-file helpers, /proc-based. java.lang.Process.pid() là API Java 9+,
+     * không có trong Android SDK (cùng họ với vụ ProcessHandle) nên PID được
+     * resolve lúc spawn qua [resolveSpawnedPid]. [pid] null = không xác định
+     * được -> để yên pidfile, không đoán bừa.
+     */
+    private fun writePid(pid: Long?) {
+        if (pid == null || pid <= 0) return
+        runCatching { pidFile().writeText(pid.toString()) }
     }
 
-    private fun clearPid(p: Process) {
+    private fun clearPid(pid: Long?) {
         // Chỉ xóa khi pidfile còn trỏ đúng process này (tránh xóa của gen mới).
+        if (pid == null) return
         runCatching {
             val f = pidFile()
-            if (f.exists() && f.readText().trim() == p.pid().toString()) f.delete()
+            if (f.exists() && f.readText().trim() == pid.toString()) f.delete()
         }
+    }
+
+    /** PID của các process con trực tiếp của app lúc này, qua /proc. */
+    private fun childPids(): Set<Long> {
+        val self = android.os.Process.myPid().toLong()
+        val out = mutableSetOf<Long>()
+        File("/proc").listFiles { d -> d.isDirectory && d.name.all { it.isDigit() } }
+            ?.forEach { d ->
+                val p = d.name.toLong()
+                if (readProcPpid(p) == self) out += p
+            }
+        return out
+    }
+
+    /**
+     * PID của process con vừa được spawn sau snapshot [before]: ưu tiên binary
+     * cloudflared, rồi tới wrapper `su` (fallback root), cuối cùng là child mới
+     * bất kỳ. Null khi không phân biệt được.
+     */
+    private fun resolveSpawnedPid(before: Set<Long>, binPath: String): Long? {
+        val self = android.os.Process.myPid().toLong()
+        val fresh = mutableListOf<Long>()
+        File("/proc").listFiles { d -> d.isDirectory && d.name.all { it.isDigit() } }
+            ?.forEach { d ->
+                val pid = d.name.toLong()
+                if (pid !in before && readProcPpid(pid) == self) fresh += pid
+            }
+        if (fresh.isEmpty()) return null
+        fresh.firstOrNull { readProcFirstArg(it) == binPath }?.let { return it }
+        fresh.firstOrNull {
+            val a = readProcFirstArg(it)
+            a == "su" || a == "/system/bin/su" || (a != null && a.endsWith("/su"))
+        }?.let { return it }
+        return fresh.firstOrNull()
     }
 
     /**
@@ -446,6 +493,7 @@ class TunnelManager(
                     args.add("--protocol")
                     args.add(proto)
                 }
+                val childrenBefore = childPids()
                 val p = try {
                     startProcess(bin, args, caBundle, named)
                 } catch (e: Exception) {
@@ -453,20 +501,24 @@ class TunnelManager(
                     continue // try next protocol / backoff
                 }
                 proc = p
-                writePid(p)
+                // Process.pid() không tồn tại trên Android -> resolve PID của
+                // process vừa spawn qua /proc để ghi pidfile (dọn stale tunnel).
+                val spawnedPid = resolveSpawnedPid(childrenBefore, bin.absolutePath)
+                procPid = spawnedPid
+                writePid(spawnedPid)
                 // BL1: stop()/restart chen giữa spawn và gán proc -> dọn ngay,
                 // không để process lạ rò rỉ ngoài tầm kiểm soát.
                 if (!wantRunning || generation.get() != gen) {
                     destroyNow(p)
-                    clearPid(p)
-                    if (proc === p) proc = null
+                    clearPid(spawnedPid)
+                    if (proc === p) { proc = null; procPid = null }
                     return@withContext false
                 }
                 val urlFound = waitForUrl(p, gen)
                 if (generation.get() != gen || !wantRunning) {
                     destroyNow(p)
-                    clearPid(p)
-                    if (proc === p) proc = null
+                    clearPid(spawnedPid)
+                    if (proc === p) { proc = null; procPid = null }
                     return@withContext false
                 }
                 if (urlFound != null) {
@@ -476,12 +528,11 @@ class TunnelManager(
                         p.waitFor()
                     } catch (_: Exception) {
                     }
-                    clearPid(p)
-                    if (proc === p) proc = null
+                    clearPid(spawnedPid)
+                    if (proc === p) { proc = null; procPid = null }
                     return@withContext wantRunning && generation.get() == gen
                 }
-                killProc()
-                clearPid(p)
+                killProc() // đã clearPid qua procPid bên trong
                 // No URL: try the next protocol before giving up this round.
             }
             if (wantRunning) {
@@ -584,8 +635,10 @@ class TunnelManager(
     private fun killProc() {
         val p = proc ?: return
         proc = null
+        val pid = procPid
+        procPid = null
         destroyNow(p)
-        clearPid(p)
+        clearPid(pid)
     }
 
     private fun destroyNow(p: Process) {

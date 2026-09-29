@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var usageSummary: TextView
 
     /** Background executor for all refresh() work (single thread, no churn). */
-    private val bg = Executors.newSingleThreadExecutor()
+    private val bgExecutor = Executors.newSingleThreadExecutor()
     /** hasRoot() result cached once at startup; refresh() never blocks on it. */
     @Volatile
     private var rootCached: Boolean? = null
@@ -363,7 +363,7 @@ class MainActivity : AppCompatActivity() {
         }
         // hasRoot() takes seconds: compute once in the background; refresh()
         // reuses the cached value so toggles never show fake-ON state.
-        bg.execute {
+        bgExecutor.execute {
             val r = ShellExecutor.hasRoot()
             rootCached = r
             runOnUiThread { if (!isFinishing && !isDestroyed) refresh() }
@@ -387,7 +387,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        bg.shutdownNow()
+        bgExecutor.shutdownNow()
         super.onDestroy()
     }
 
@@ -676,7 +676,7 @@ class MainActivity : AppCompatActivity() {
     private fun refresh() {
         // All work runs on the shared single-thread executor (no thread churn);
         // hasRoot() is cached from onCreate so refresh() never blocks toggles.
-        bg.execute {
+        bgExecutor.execute {
             val root = rootCached ?: false
             val prefs = Prefs(this@MainActivity)
             val acc = MuseAccessibilityService.instance != null || accessibilityOn()
