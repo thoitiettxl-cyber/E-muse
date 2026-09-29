@@ -37,7 +37,6 @@ class SensitiveActionExecutor(private val appCtx: Context) {
 
     fun setSetting(namespace: String, key: String, value: String): JSONObject {
         val tool = "set_setting"
-        requireRoot(tool)?.let { return it }
         val ns = namespace.lowercase()
         if (ns != "system" && ns != "secure" && ns != "global") {
             return err("INVALID_NAMESPACE", "namespace must be system, secure or global", tool)
@@ -48,6 +47,7 @@ class SensitiveActionExecutor(private val appCtx: Context) {
         if (value.length > 2000) {
             return err("INVALID_VALUE", "value must be at most 2000 characters", tool)
         }
+        requireRoot(tool)?.let { return it }
         val r = ShellExecutor.exec(
             "settings --user current put ${shellQuote(ns)} ${shellQuote(key)} ${shellQuote(value)}",
             asRoot = true,

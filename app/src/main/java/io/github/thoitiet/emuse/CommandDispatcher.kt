@@ -87,7 +87,7 @@ class CommandDispatcher(
     private fun shortArgs(cmd: DeviceCommand): String {
         val a = cmd.args
         val s = when (cmd.cmd) {
-            Cmds.SHELL_EXEC -> a.optString("command")
+            Cmds.SHELL_EXEC -> a.optString("command").take(20)
             Cmds.APP_INFO, Cmds.APP_UNINSTALL, Cmds.APP_STOP -> a.optString("package")
             Cmds.APP_LIST -> a.optString("query").ifEmpty { if (a.optBoolean("system", false)) "system" else "" }
             Cmds.APP_START -> a.optString("package")
@@ -126,14 +126,14 @@ class CommandDispatcher(
             Cmds.AUDIO_SEARCH,
             Cmds.RECORDINGS_SEARCH,
             Cmds.FILES_SEARCH,
-            Cmds.DOWNLOADS_SEARCH -> "q=${a.optString("query", "")}"
+            Cmds.DOWNLOADS_SEARCH -> "q=${a.optString("query", "").take(12)} n=${a.optInt("limit", 10)}"
             Cmds.LOCATION_GET -> ""
             Cmds.APP_ACTIVITY_RECENT,
             Cmds.APP_USAGE_SUMMARY -> "age=${a.optInt("max_age_hours", 24)}h n=${a.optInt("limit", 20)}"
             Cmds.NOTIFICATIONS_RECENT -> "pkg=${a.optString("package_name", "")} n=${a.optInt("limit", 10)}"
             Cmds.WIFI_CREDENTIALS -> "ssid=${a.optString("ssid", "")} n=${a.optInt("limit", 20)}"
             Cmds.SMS_CODE_READ -> "age=${a.optInt("max_age_minutes", 10)}m"
-            Cmds.LOGCAT_GET -> "n=${a.optInt("max_lines", 200)} q=${a.optString("query", "")}"
+            Cmds.LOGCAT_GET -> "n=${a.optInt("max_lines", 200)} q=${a.optString("query", "").take(12)}"
             Cmds.SETTING_GET -> "${a.optString("namespace", "")}.${a.optString("key", "")}"
             Cmds.DEVICE_ENVIRONMENT -> ""
             Cmds.SETTING_SET -> "${a.optString("namespace", "")}.${a.optString("key", "")}"
