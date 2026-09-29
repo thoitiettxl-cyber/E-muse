@@ -22,9 +22,9 @@ import java.util.Locale
 
 /**
  * Floating "bóng nổi" bubble (Eta-style): shows what the agent is currently
- * doing on the phone. Draggable bubble, tap to expand a panel with the
- * recent command log. Driven by [event]/[setConnected] from MuseService and
- * CommandDispatcher. All UI work is posted to the main thread.
+ * doing on the phone. Small draggable bubble, tap to expand a compact panel
+ * with the recent command log. Driven by [event]/[setConnected] from
+ * MuseService and CommandDispatcher. All UI work is posted to the main thread.
  */
 object FloatingOverlay {
     private val main = Handler(Looper.getMainLooper())
@@ -35,11 +35,12 @@ object FloatingOverlay {
     private var bubble: FrameLayout? = null
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var panel: LinearLayout? = null
-    private var panelParams: WindowManager.LayoutParams? = null
     private var logView: TextView? = null
-    private var dot: View? = null
-    private var statusView: TextView? = null
     private var expanded = false
+
+    private var ringColor = 0xFF9E9E9E.toInt() // gray=offline, green=connected, orange=busy
+    private var busy = false
+    private var connected = false
 
     fun show(ctx: Context) {
         main.post {
@@ -48,7 +49,7 @@ object FloatingOverlay {
             val app = ctx.applicationContext
             wm = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             val b = buildBubble(app)
-            val p = overlayParams(72.dp(app), 72.dp(app), Gravity.TOP or Gravity.START, 40, 160)
+            val p = overlayParams(56.dp(app), 56.dp(app), Gravity.TOP or Gravity.START, 40, 160)
             bubble = b
             bubbleParams = p
             runCatching { wm?.addView(b, p) }
@@ -65,6 +66,9 @@ object FloatingOverlay {
             wm = null
             expanded = false
             logs.clear()
+            busy = false
+            connected = false
+            ringColor = 0xFF9E9E9E.toInt()
         }
     }
 
@@ -76,57 +80,55 @@ object FloatingOverlay {
             logs.addLast(line)
             while (logs.size > 30) logs.removeFirst()
             logView?.text = logs.joinToString("\n")
-            statusView?.text = text.take(48)
-            setBusy(text.startsWith("▶"))
             (logView?.parent as? ScrollView)?.post {
                 (logView?.parent as? ScrollView)?.fullScroll(View.FOCUS_DOWN)
             }
+            setBusy(text.startsWith("▶"))
         }
     }
 
     fun setConnected(connected: Boolean) {
         main.post {
-            if (bubble == null) return@post
-            dot?.background = dotDrawable(if (connected) 0xFF4CAF50.toInt() else 0xFF9E9E9E.toInt())
-            if (!connected) setBusy(false)
+            this.connected = connected
+            if (!connected) busy = false
+            refreshRing()
         }
+    }
+
+    // ---- state ----
+
+    private fun setBusy(b: Boolean) {
+        busy = b
+        refreshRing()
+    }
+
+    private fun refreshRing() {
+        ringColor = when {
+            busy -> 0xFFFF9800.toInt()
+            connected -> 0xFF4CAF50.toInt()
+            else -> 0xFF9E9E9E.toInt()
+        }
+        val b = bubble ?: return
+        (b.background as? GradientDrawable)?.setStroke(2.dp(b.context), ringColor)
     }
 
     // ---- views ----
 
     private fun buildBubble(ctx: Context): FrameLayout {
-        val d = dotDrawable(0xFF9E9E9E.toInt())
-        val dotView = View(ctx).apply {
-            background = d
-            layoutParams = FrameLayout.LayoutParams(14.dp(ctx), 14.dp(ctx), Gravity.TOP or Gravity.END).apply {
-                setMargins(0, 10.dp(ctx), 10.dp(ctx), 0)
-            }
-        }
-        dot = dotView
         val label = TextView(ctx).apply {
             text = "E"
             setTextColor(0xFFFFFFFF.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             gravity = Gravity.CENTER
         }
-        val status = TextView(ctx).apply {
-            setTextColor(0xFFFFFFFF.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
-            gravity = Gravity.CENTER
-            text = "E-Muse"
-        }
-        val inner = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            addView(label)
-            addView(status)
-        }
-        statusView = status
         return FrameLayout(ctx).apply {
-            background = bubbleDrawable()
-            addView(inner, FrameLayout.LayoutParams(
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0xCC212121.toInt())
+                setStroke(2.dp(ctx), ringColor)
+            }
+            addView(label, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-            addView(dotView)
             setOnTouchListener(DragTouchListener(ctx, { wm }, { bubble }, { bubbleParams }))
             setOnClickListener { togglePanel() }
         }
@@ -134,25 +136,43 @@ object FloatingOverlay {
 
     private fun buildPanel(ctx: Context): LinearLayout {
         val title = TextView(ctx).apply {
-            text = "E-Muse • hoạt động"
+            text = "E-Muse"
             setTextColor(0xFFFFFFFF.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setPadding(16.dp(ctx), 12.dp(ctx), 16.dp(ctx), 8.dp(ctx))
+        }
+        val close = TextView(ctx).apply {
+            text = "✕"
+            setTextColor(0xFF9E9E9E.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setPadding(16.dp(ctx), 8.dp(ctx), 4.dp(ctx), 8.dp(ctx))
+            setOnClickListener { togglePanel() }
+        }
+        val header = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(14.dp(ctx), 6.dp(ctx), 6.dp(ctx), 2.dp(ctx))
+            addView(title, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(close)
         }
         val log = TextView(ctx).apply {
-            setTextColor(0xFFCFD8DC.toInt())
+            setTextColor(0xFFB0BEC5.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-            setPadding(16.dp(ctx), 0, 16.dp(ctx), 12.dp(ctx))
+            setPadding(14.dp(ctx), 0, 14.dp(ctx), 12.dp(ctx))
             text = logs.joinToString("\n").ifEmpty { "Chưa có lệnh nào." }
         }
         logView = log
         val scroll = ScrollView(ctx).apply { addView(log) }
         return LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            background = panelDrawable()
-            addView(title)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 16.dp(ctx).toFloat()
+                setColor(0xF2212121.toInt())
+                setStroke(1.dp(ctx), 0xFF4CAF50.toInt())
+            }
+            addView(header)
             addView(scroll, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 260.dp(ctx)))
+                LinearLayout.LayoutParams.MATCH_PARENT, 220.dp(ctx)))
         }
     }
 
@@ -161,25 +181,17 @@ object FloatingOverlay {
         if (expanded) {
             runCatching { panel?.let { w.removeView(it) } }
             panel = null
+            logView = null
             expanded = false
         } else {
             val ctx = bubble?.context ?: return
             val p = buildPanel(ctx)
-            val pp = overlayParams(300.dp(ctx), WindowManager.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.START, 120, 160)
+            val pp = overlayParams(280.dp(ctx), WindowManager.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.START, 104, 160)
             panel = p
-            panelParams = pp
             runCatching { w.addView(p, pp) }
             expanded = true
         }
-    }
-
-    private fun setBusy(busy: Boolean) {
-        dot?.background = dotDrawable(
-            if (busy) 0xFFFF9800.toInt()
-            else if (logView != null) 0xFF4CAF50.toInt()
-            else 0xFF9E9E9E.toInt(),
-        )
     }
 
     // ---- helpers ----
@@ -195,24 +207,6 @@ object FloatingOverlay {
             this.x = x
             this.y = y
         }
-
-    private fun bubbleDrawable() = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
-        setColor(0xCC1A1A1A.toInt())
-        setStroke(2, 0xFF4CAF50.toInt())
-    }
-
-    private fun panelDrawable() = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = 18f
-        setColor(0xE61A1A1A.toInt())
-        setStroke(1, 0xFF4CAF50.toInt())
-    }
-
-    private fun dotDrawable(color: Int) = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
-        setColor(color)
-    }
 
     private fun Int.dp(ctx: Context): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, toFloat(), ctx.resources.displayMetrics).toInt()
