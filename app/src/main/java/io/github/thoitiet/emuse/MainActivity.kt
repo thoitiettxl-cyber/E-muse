@@ -52,10 +52,7 @@ import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.GridView
-import top.yukonga.miuix.kmp.icon.extended.Home
-import top.yukonga.miuix.kmp.icon.extended.Setting
-import top.yukonga.miuix.kmp.icon.extended.Shield
+import top.yukonga.miuix.kmp.icon.basic.Info
 
 /**
  * Main activity (Compose + Miuix, like Camera2Magit): bottom nav with 4 tabs
@@ -80,6 +77,29 @@ class MainActivity : ComponentActivity() {
             androidx.compose.ui.graphics.Color(0xFF4CAF50), clickable = false)
     )
     private var settingsState by mutableStateOf(SettingsUiState())
+
+    private val rowPermsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        val denied = grants.filterValues { !it }.keys.toList()
+        val granted = grants.size - denied.size
+        val neverAsk = denied.filter {
+            !ActivityCompat.shouldShowRequestPermissionRationale(this, it)
+        }
+        val msg = buildString {
+            append("Đã cấp $granted/${grants.size} quyền")
+            if (neverAsk.isNotEmpty()) {
+                append(". ${neverAsk.size} quyền bị từ chối vĩnh viễn: " +
+                    "mở Cài đặt > Ứng dụng > E-Muse > Quyền để cấp thủ công")
+            }
+        }
+        toast(msg)
+        refreshAll()
+    }
+
+    private val notifPermLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { _ -> refreshAll() }
 
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -123,11 +143,7 @@ class MainActivity : ComponentActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                REQ_POST_NOTIFICATIONS,
-            )
+            notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         // hasRoot() takes seconds: compute once in background.
@@ -151,34 +167,6 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray,
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_POST_NOTIFICATIONS || requestCode == REQ_ROW_PERMS) {
-            if (requestCode == REQ_ROW_PERMS) {
-                val denied = permissions.indices
-                    .filter { grantResults[it] != PackageManager.PERMISSION_GRANTED }
-                    .map { permissions[it] }
-                val granted = permissions.size - denied.size
-                val neverAsk = denied.filter {
-                    !ActivityCompat.shouldShowRequestPermissionRationale(this, it)
-                }
-                val msg = buildString {
-                    append("Đã cấp $granted/${permissions.size} quyền")
-                    if (neverAsk.isNotEmpty()) {
-                        append(". ${neverAsk.size} quyền bị từ chối vĩnh viễn: " +
-                            "mở Cài đặt > Ứng dụng > E-Muse > Quyền để cấp thủ công")
-                    }
-                }
-                toast(msg)
-            }
-            refreshAll()
-        }
-    }
-
     @Composable
     private fun MainScreen(
         apiKeyState: androidx.compose.foundation.text.input.TextFieldState,
@@ -197,10 +185,10 @@ class MainActivity : ComponentActivity() {
         }
 
         val tabs = listOf(
-            TabItem("Trang chủ", MiuixIcons.Extended.Home),
-            TabItem("Tools", MiuixIcons.Extended.GridView),
-            TabItem("Quyền", MiuixIcons.Extended.Shield),
-            TabItem("Cài đặt", MiuixIcons.Extended.Setting),
+            TabItem("Trang chủ", MiuixIcons.Home),
+            TabItem("Tools", MiuixIcons.GridView),
+            TabItem("Quyền", MiuixIcons.Basic.Info),
+            TabItem("Cài đặt", MiuixIcons.Settings),
         )
 
         Scaffold(
@@ -370,7 +358,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestPerms(perms: Array<String>) {
-        ActivityCompat.requestPermissions(this, perms, REQ_ROW_PERMS)
+        rowPermsLauncher.launch(perms)
     }
 
     // ---- Settings actions ----
@@ -541,10 +529,5 @@ class MainActivity : ComponentActivity() {
 
     private fun toast(msg: String) {
         android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
-    }
-
-    companion object {
-        private const val REQ_POST_NOTIFICATIONS = 1
-        private const val REQ_ROW_PERMS = 100
     }
 }

@@ -187,7 +187,9 @@ class MuseService : Service() {
         startForegroundX(buildNotification("E-Muse đang chạy"), fgTypes)
         runCatching {
             val mgr = getSystemService(MediaProjectionManager::class.java)
-            ScreenCapture.setProjection(mgr.getMediaProjection(resultCode, data))
+            val projection = mgr.getMediaProjection(resultCode, data)
+                ?: throw IllegalStateException("MediaProjection null")
+            ScreenCapture.setProjection(projection)
             updateNotification("E-Muse: đã cấp quyền chụp màn hình")
         }.onFailure {
             updateNotification("E-Muse: cấp quyền chụp màn hình thất bại")

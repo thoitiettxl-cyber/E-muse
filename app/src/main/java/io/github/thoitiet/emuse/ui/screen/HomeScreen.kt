@@ -1,5 +1,6 @@
 package io.github.thoitiet.emuse.ui.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -122,9 +123,9 @@ fun HomeScreen(
                             text = "URL: ${uiState.tunnelUrl}\n(bấm để copy)",
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clickable(onClick = onTunnelUrlClick)
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             color = MiuixTheme.colorScheme.primary,
-                            onClick = onTunnelUrlClick,
                         )
                     }
                 }
