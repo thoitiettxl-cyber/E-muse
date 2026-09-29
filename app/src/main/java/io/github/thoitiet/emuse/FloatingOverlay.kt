@@ -6,6 +6,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -27,11 +28,13 @@ import java.util.Locale
  * MuseService and CommandDispatcher. All UI work is posted to the main thread.
  */
 object FloatingOverlay {
+    private const val TAG = "FloatingOverlay"
     private val main = Handler(Looper.getMainLooper())
     private val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.US)
     private val logs = ArrayDeque<String>()
 
     private var wm: WindowManager? = null
+    private var overlayType: Int = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
     private var bubble: FrameLayout? = null
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var badgeView: TextView? = null
@@ -46,14 +49,46 @@ object FloatingOverlay {
     fun show(ctx: Context) {
         main.post {
             if (bubble != null) return@post
-            if (!Settings.canDrawOverlays(ctx)) return@post
-            val app = ctx.applicationContext
-            wm = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val b = buildBubble(app)
-            val p = overlayParams(56.dp(app), 56.dp(app), Gravity.TOP or Gravity.START, 40, 160)
+            // WindowManagerService only allows TYPE_ACCESSIBILITY_OVERLAY from an
+            // accessibility service's own context — the service owns the window
+            // token, and addView() from a regular app context is rejected with
+            // BadTokenException ("Only accessibility services can add
+            // accessibility overlays"). Eta does the same: it resolves the
+            // service first and uses it as the overlay context. Fall back to
+            // TYPE_APPLICATION_OVERLAY (needs the draw-over permission) when
+            // the service isn't connected.
+            val svc = MuseAccessibilityService.instance
+            val overlayCtx = svc ?: ctx.applicationContext
+            if (svc == null && !Settings.canDrawOverlays(ctx)) {
+                Log.w(TAG, "show: no a11y service and canDrawOverlays=false, skip")
+                return@post
+            }
+            val wm = overlayCtx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+            if (wm == null) {
+                Log.w(TAG, "show: no WindowManager")
+                return@post
+            }
+            // Eta's trick: an accessibility overlay is invisible to the accessibility
+            // tree (and to screenshots), so ui_snapshot never sees our own orb and
+            // Pi can't tap it by mistake.
+            val type = if (svc != null) {
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            }
+            val b = buildBubble(overlayCtx)
+            val p = overlayParams(type, 56.dp(overlayCtx), 56.dp(overlayCtx),
+                Gravity.TOP or Gravity.START, 40, 160)
+            // Only mark the overlay as shown after addView actually succeeds —
+            // a swallowed failure used to leave bubble != null with no window.
+            val ok = runCatching { wm.addView(b, p) }
+                .onFailure { Log.e(TAG, "show: addView failed (type=$type)", it) }
+                .isSuccess
+            if (!ok) return@post
+            this.wm = wm
+            overlayType = type
             bubble = b
             bubbleParams = p
-            runCatching { wm?.addView(b, p) }
             event("Bóng nổi đã bật")
         }
     }
@@ -257,38 +292,33 @@ object FloatingOverlay {
         val w = wm ?: return
         if (expanded) {
             runCatching { panel?.let { w.removeView(it) } }
+                .onFailure { Log.w(TAG, "togglePanel: removeView failed", it) }
             panel = null
             logView = null
             expanded = false
         } else {
             val ctx = bubble?.context ?: return
             val p = buildPanel(ctx)
-            val pp = overlayParams(280.dp(ctx), WindowManager.LayoutParams.WRAP_CONTENT,
+            val pp = overlayParams(overlayType, 280.dp(ctx), WindowManager.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP or Gravity.START, 104, 160)
-            panel = p
             // addView then force visible: a panel added while the window
             // token is mid-transition could otherwise stay invisible.
-            runCatching {
+            // Only flip `expanded` when the add actually succeeds.
+            val ok = runCatching {
                 w.addView(p, pp)
                 p.visibility = View.VISIBLE
                 p.bringToFront()
-            }
+            }.onFailure { Log.e(TAG, "togglePanel: addView failed (type=$overlayType)", it) }
+                .isSuccess
+            if (!ok) return
+            panel = p
             expanded = true
         }
     }
 
     // ---- helpers ----
 
-    private fun overlayParams(w: Int, h: Int, gravity: Int, x: Int, y: Int): WindowManager.LayoutParams {
-        // Eta's trick: an accessibility overlay is invisible to the accessibility
-        // tree (and to screenshots), so ui_snapshot never sees our own orb and
-        // Pi can't tap it by mistake. Fall back to the application overlay when
-        // the accessibility service isn't running.
-        val type = if (MuseAccessibilityService.instance != null) {
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
-        } else {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        }
+    private fun overlayParams(type: Int, w: Int, h: Int, gravity: Int, x: Int, y: Int): WindowManager.LayoutParams {
         return WindowManager.LayoutParams(
             w, h,
             type,
