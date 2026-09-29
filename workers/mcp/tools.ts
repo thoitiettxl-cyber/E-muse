@@ -251,13 +251,18 @@ export const TOOL_DEFS: ToolDef[] = [
   },
   {
     name: "input_tap",
-    description: "Tap the screen at (x, y) in pixels.",
+    description:
+      "Tap a UI element or a screen point. Preferred: pass elementId from ui_snapshot (taps the live accessibility node directly, no coordinate guessing). Fallback: x + y in pixels.",
     inputSchema: withDevice(
       {
+        elementId: {
+          type: "string",
+          description: "Element id from ui_snapshot (e.g. \"e12\").",
+        },
         x: { type: "number", description: "X coordinate in pixels." },
         y: { type: "number", description: "Y coordinate in pixels." },
       },
-      ["x", "y"],
+      [],
     ),
     annotations: W,
     kind: "write",
@@ -315,6 +320,15 @@ export const TOOL_DEFS: ToolDef[] = [
     annotations: RO,
     kind: "query",
     cmd: "ui.dump",
+  },
+  {
+    name: "ui_snapshot",
+    description:
+      "Compact UI snapshot (Eta-style): flat list of on-screen elements with stable ids, text, content description, bounds and clickable/editable/scrollable flags. Noise nodes are filtered on-device. Use the ids with input_tap elementId instead of guessing coordinates.",
+    inputSchema: withDevice({}),
+    annotations: RO,
+    kind: "query",
+    cmd: "ui.snapshot",
   },
   {
     name: "tool_flags",

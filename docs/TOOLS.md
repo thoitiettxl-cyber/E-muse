@@ -19,11 +19,12 @@ bắt buộc khi có nhiều máy cùng kết nối.
 | `file_push` | write | **yes** | Ghi file base64 (root fallback ngoài sandbox) |
 | `file_delete` | write | **yes** | Xóa file/thư mục |
 | `screen_capture` | query | - | Screenshot PNG (image block + width/height); cần root hoặc MediaProjection đã cấp quyền |
-| `input_tap` | write | - | Chạm (x, y) pixel |
+| `input_tap` | write | - | Chạm element (`elementId` từ `ui_snapshot`, ưu tiên) hoặc (x, y) pixel |
 | `input_swipe` | write | - | Vuốt (x1,y1 → x2,y2, durationMs) |
 | `input_key` | write | - | Key code Android (3=HOME, 4=BACK, 66=ENTER...) |
 | `input_text` | write | - | Gõ text vào field đang focus |
 | `ui_dump` | query | - | Cây UI dạng JSON (cần accessibility hoặc root) |
+| `ui_snapshot` | query | - | **List element gọn kiểu Eta/E-Jev** (id, text, desc, bounds) — cần accessibility; dùng id với `input_tap` thay vì đoán tọa độ |
 | `tool_flags` | query | - | **Xem/bật/tắt tool** — luôn khả dụng, không tắt được chính nó |
 
 ## tool_flags

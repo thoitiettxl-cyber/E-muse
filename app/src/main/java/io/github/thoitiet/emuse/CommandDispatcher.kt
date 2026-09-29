@@ -8,6 +8,7 @@ import io.github.thoitiet.emuse.exec.InputExecutor
 import io.github.thoitiet.emuse.exec.ScreenExecutor
 import io.github.thoitiet.emuse.exec.ShellExecutor
 import io.github.thoitiet.emuse.exec.UiDumpExecutor
+import io.github.thoitiet.emuse.exec.UiSnapshotter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -104,7 +105,11 @@ class CommandDispatcher(
 
             Cmds.SCREEN_CAPTURE -> ScreenExecutor.capture()
 
-            Cmds.INPUT_TAP -> InputExecutor.tap(a.getInt("x"), a.getInt("y"))
+            Cmds.INPUT_TAP -> {
+                val elementId = a.optString("elementId").ifEmpty { null }
+                if (elementId != null) UiSnapshotter.tapElement(elementId)
+                else InputExecutor.tap(a.getInt("x"), a.getInt("y"))
+            }
             Cmds.INPUT_SWIPE -> InputExecutor.swipe(
                 a.getInt("x1"), a.getInt("y1"),
                 a.getInt("x2"), a.getInt("y2"),
@@ -114,6 +119,7 @@ class CommandDispatcher(
             Cmds.INPUT_TEXT -> InputExecutor.text(a.getString("text"))
 
             Cmds.UI_DUMP -> UiDumpExecutor.dump()
+            Cmds.UI_SNAPSHOT -> UiSnapshotter.snapshot()
 
             else -> throw IllegalArgumentException("unknown cmd: ${cmd.cmd}")
         }

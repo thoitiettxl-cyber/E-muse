@@ -20,7 +20,8 @@ export type Cmd =
   | "input.swipe"
   | "input.key"
   | "input.text"
-  | "ui.dump";
+  | "ui.dump"
+  | "ui.snapshot";
 
 /** Worker -> app. */
 export interface DeviceCommand {
