@@ -8,6 +8,7 @@ import io.github.thoitiet.emuse.exec.DeviceExecutor
 import io.github.thoitiet.emuse.exec.FileExecutor
 import io.github.thoitiet.emuse.exec.InputExecutor
 import io.github.thoitiet.emuse.exec.ScreenExecutor
+import io.github.thoitiet.emuse.exec.SensitiveReadExecutor
 import io.github.thoitiet.emuse.exec.ShellExecutor
 import io.github.thoitiet.emuse.exec.SystemExecutor
 import io.github.thoitiet.emuse.exec.UiDumpExecutor
