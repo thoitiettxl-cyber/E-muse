@@ -130,7 +130,11 @@ class MuseService : Service() {
             }
         }
         if (prefs.tunnelEnabled) {
-            tm.start("http://127.0.0.1:$port") { done, total ->
+            tm.start(
+                "http://127.0.0.1:$port",
+                prefs.tunnelToken,
+                prefs.tunnelHostname,
+            ) { done, total ->
                 if (total > 0) FloatingOverlay.event("Tải cloudflared ${(done * 100 / total)}%")
             }
         }
@@ -146,13 +150,18 @@ class MuseService : Service() {
 
     /** Toggle the tunnel at runtime (called from MainActivity). */
     fun setTunnelEnabled(enabled: Boolean) {
-        Prefs(this).tunnelEnabled = enabled
+        val prefs = Prefs(this)
+        prefs.tunnelEnabled = enabled
         val tm = tunnel ?: return
         if (enabled) {
-            tm.start("http://127.0.0.1:${Prefs(this).mcpPort}") { _, _ -> }
+            tm.start(
+                "http://127.0.0.1:${prefs.mcpPort}",
+                prefs.tunnelToken,
+                prefs.tunnelHostname,
+            ) { _, _ -> }
         } else {
             tm.stop()
-            Prefs(this).tunnelUrl = ""
+            prefs.tunnelUrl = ""
             updateNotification("E-Muse: đang chạy (direct local)")
         }
     }

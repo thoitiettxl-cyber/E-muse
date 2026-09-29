@@ -32,6 +32,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusView: TextView
     private lateinit var tunnelUrlView: TextView
     private lateinit var tunnelBtn: Button
+    private lateinit var tunnelTokenInput: EditText
+    private lateinit var tunnelHostInput: EditText
 
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -148,6 +150,10 @@ class MainActivity : AppCompatActivity() {
         tunnelBtn = Button(this).apply {
             setOnClickListener {
                 val prefs = Prefs(this@MainActivity)
+                // Persist named-tunnel settings before (re)starting.
+                prefs.tunnelToken = tunnelTokenInput.text.toString().trim()
+                val host = tunnelHostInput.text.toString().trim()
+                prefs.tunnelHostname = host.ifEmpty { "mcp.khosihuythao.com" }
                 val enable = !prefs.tunnelEnabled
                 // The toggle intent also (re)starts the service when needed.
                 ContextCompat.startForegroundService(
@@ -179,6 +185,17 @@ class MainActivity : AppCompatActivity() {
         root.addView(overlayBtn)
         root.addView(spacer(24))
         root.addView(label("Cloudflare Tunnel (truy cập trực tiếp)"))
+        tunnelTokenInput = EditText(this).apply {
+            hint = "Named tunnel token (để trống = Quick Tunnel)"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setText(prefs.tunnelToken)
+        }
+        tunnelHostInput = EditText(this).apply {
+            hint = "Hostname cố định (vd mcp.khosihuythao.com)"
+            setText(prefs.tunnelHostname)
+        }
+        root.addView(tunnelTokenInput)
+        root.addView(tunnelHostInput)
         root.addView(tunnelBtn)
         root.addView(tunnelUrlView)
         root.addView(spacer(24))

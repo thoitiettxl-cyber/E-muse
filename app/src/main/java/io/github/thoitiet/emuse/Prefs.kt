@@ -30,6 +30,16 @@ class Prefs(ctx: Context) {
         get() = sp.getString("tunnel_url", "") ?: ""
         set(v) = sp.edit().putString("tunnel_url", v).apply()
 
+    /** Named-tunnel token (empty = Quick Tunnel with a random URL). */
+    var tunnelToken: String
+        get() = sp.getString("tunnel_token", "") ?: ""
+        set(v) = sp.edit().putString("tunnel_token", v).apply()
+
+    /** Fixed public hostname for named-tunnel mode. */
+    var tunnelHostname: String
+        get() = sp.getString("tunnel_hostname", "mcp.khosihuythao.com") ?: ""
+        set(v) = sp.edit().putString("tunnel_hostname", v).apply()
+
     /** Local MCP server port (localhost only). */
     var mcpPort: Int
         get() = sp.getInt("mcp_port", 18789)

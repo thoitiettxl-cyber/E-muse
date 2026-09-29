@@ -55,6 +55,8 @@ class TunnelManager(
     private var supervisor: Job? = null
     private var wantRunning = false
     private var localUrl = ""
+    private var tunnelToken = ""
+    private var tunnelHostname = ""
     private var lastErrTail: List<String> = emptyList()
 
     private fun setState(s: State) {
@@ -164,9 +166,20 @@ class TunnelManager(
     /**
      * Start the tunnel (idempotent). Downloads the binary first when needed.
      * Runs a supervisor that restarts cloudflared with backoff if it dies.
+     *
+     * @param token blank = Quick Tunnel (random trycloudflare.com URL);
+     *   non-blank = named tunnel via `cloudflared tunnel run --token`, whose
+     *   public hostname is fixed server-side ([hostname]).
      */
-    fun start(url: String, onDownloadProgress: (Long, Long) -> Unit = { _, _ -> }) {
+    fun start(
+        url: String,
+        token: String = "",
+        hostname: String = "",
+        onDownloadProgress: (Long, Long) -> Unit = { _, _ -> },
+    ) {
         localUrl = url
+        tunnelToken = token.trim()
+        tunnelHostname = hostname.trim()
         if (wantRunning) return
         wantRunning = true
         supervisor?.cancel()
@@ -205,11 +218,21 @@ class TunnelManager(
      */
     private suspend fun runOnce(bin: File, caBundle: File?): Boolean = withContext(Dispatchers.IO) {
         // Prefer QUIC; fall back to http2 when UDP is blocked on this network.
+        val named = tunnelToken.isNotBlank()
         for (proto in listOf(null, "http2")) {
             if (!wantRunning) return@withContext false
-            val args = mutableListOf(
-                bin.absolutePath, "tunnel", "--url", localUrl, "--no-autoupdate",
-            )
+            val args = if (named) {
+                // Named tunnel: everything (hostname, ingress) is configured
+                // server-side; the token authenticates this connector.
+                mutableListOf(
+                    bin.absolutePath, "tunnel", "--no-autoupdate",
+                    "run", "--token", tunnelToken,
+                )
+            } else {
+                mutableListOf(
+                    bin.absolutePath, "tunnel", "--url", localUrl, "--no-autoupdate",
+                )
+            }
             if (proto != null) {
                 args.add("--protocol")
                 args.add(proto)
@@ -259,9 +282,14 @@ class TunnelManager(
         }
     }
 
-    /** Scan stderr for the public URL; null when the process exits first. */
+    /**
+     * Scan stderr for the public URL; null when the process exits first.
+     * Named tunnels print no URL — they log "Registered tunnel connection"
+     * instead, so map that to the fixed hostname.
+     */
     private fun waitForUrl(p: Process): String? {
         val deadline = System.currentTimeMillis() + URL_TIMEOUT_MS
+        val fixedUrl = "https://$tunnelHostname".takeIf { tunnelToken.isNotBlank() && tunnelHostname.isNotBlank() }
         val reader = p.errorStream.bufferedReader()
         val tail = ArrayDeque<String>()
         try {
@@ -278,6 +306,9 @@ class TunnelManager(
                 tail.addLast(line.take(200))
                 if (tail.size > 10) tail.removeFirst()
                 URL_RE.find(line)?.let { return it.value }
+                if (fixedUrl != null && line.contains("Registered tunnel connection")) {
+                    return fixedUrl
+                }
                 if (line.contains("failed", ignoreCase = true) &&
                     line.contains("tunnel", ignoreCase = true)
                 ) {
