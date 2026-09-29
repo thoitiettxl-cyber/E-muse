@@ -111,9 +111,74 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "list_alarms",
-        "Read the next system alarm (trigger time). Full alarm/timer listing needs the clock app's private database and is not available through this device-direct tool.",
-        withDevice(""),
+        "List alarms (id, hour, minutes, days, enabled, message) from the ColorOS clock app database; falls back to the next system alarm when root/the OEM database is unavailable.",
+        withDevice(
+            "\"enabled_only\":{\"type\":\"boolean\",\"description\":\"Only enabled alarms. Default true.\"}," +
+                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+        ),
         true, false, true, false, "query", "alarm.list",
+    ),
+    ToolDef(
+        "list_active_timers",
+        "List active timers (description, duration, state, remaining/alert time) from the ColorOS clock app database. Needs root; ColorOS only.",
+        withDevice(
+            "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+        ),
+        true, false, true, false, "query", "timer.active_list",
+    ),
+    ToolDef(
+        "search_coloros_notes",
+        "Search ColorOS notes and to-dos by title or body. Needs root; ColorOS Notes only.",
+        withDevice(
+            "\"query\":{\"type\":\"string\",\"description\":\"Title or body fragment. Omit to list all.\"}," +
+                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "coloros.notes_search",
+    ),
+    ToolDef(
+        "search_coloros_recordings",
+        "Search ordinary and call recordings in the ColorOS Recorder app (name, duration, type, file path). Needs root; ColorOS only.",
+        withDevice(
+            "\"query\":{\"type\":\"string\",\"description\":\"Name or path fragment. Omit to list all.\"}," +
+                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "coloros.recordings_search",
+    ),
+    ToolDef(
+        "search_recording_summaries",
+        "Search transcription summaries and note content linked to ColorOS recordings. Needs root; ColorOS only.",
+        withDevice(
+            "\"query\":{\"type\":\"string\",\"description\":\"Summary content fragment. Omit to list all.\"}," +
+                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "coloros.recording_summaries_search",
+    ),
+    ToolDef(
+        "search_coloros_memories",
+        "Search ColorOS system memories (collected info, bills, schedules, pickup codes, parcels, places, attachments). Needs root; ColorOS only.",
+        withDevice(
+            "\"query\":{\"type\":\"string\",\"description\":\"Memory text fragment. Omit to list recent.\"}," +
+                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "coloros.memories_search",
+    ),
+    ToolDef(
+        "search_personal_orders",
+        "Search food-delivery, shopping, parcel, ticket and travel orders recognized in ColorOS system memories. Needs root; ColorOS only.",
+        withDevice(
+            "\"query\":{\"type\":\"string\",\"description\":\"Order text fragment. Omit to list recent.\"}," +
+                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "coloros.personal_orders_search",
+    ),
+    ToolDef(
+        "search_saved_places",
+        "Search places saved or recognized in ColorOS system memories. Needs root; ColorOS only.",
+        withDevice(
+            "\"query\":{\"type\":\"string\",\"description\":\"Place name or address fragment. Omit to list all.\"}," +
+                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "coloros.saved_places_search",
     ),
     ToolDef(
         "top_memory_apps",

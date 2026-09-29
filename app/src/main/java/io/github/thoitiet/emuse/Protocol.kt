@@ -49,8 +49,17 @@ object Cmds {
     const val ALARM_SET = "alarm.set"
     const val TIMER_SET = "timer.set"
     const val ALARM_LIST = "alarm.list"
+    const val TIMER_ACTIVE_LIST = "timer.active_list"
     const val MEMORY_TOP_APPS = "memory.top_apps"
     const val STORAGE_TOP_APPS = "storage.top_apps"
+
+    // P7: Eta-parity ColorOS-specific tools
+    const val COLOROS_NOTES_SEARCH = "coloros.notes_search"
+    const val COLOROS_RECORDINGS_SEARCH = "coloros.recordings_search"
+    const val RECORDING_SUMMARIES_SEARCH = "coloros.recording_summaries_search"
+    const val COLOROS_MEMORIES_SEARCH = "coloros.memories_search"
+    const val PERSONAL_ORDERS_SEARCH = "coloros.personal_orders_search"
+    const val SAVED_PLACES_SEARCH = "coloros.saved_places_search"
 
     // P5: Eta-parity sensitive-read tools
     const val CONTACTS_SEARCH = "contacts.search"

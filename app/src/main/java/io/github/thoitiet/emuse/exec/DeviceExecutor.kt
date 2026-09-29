@@ -300,11 +300,12 @@ class DeviceExecutor(private val appCtx: Context) {
     }
 
     /**
-     * Eta's list_alarms/list_active_timers read the OEM clock app's private
-     * database (ColorOS-specific, P7). This device-direct version reports
-     * the next system alarm via AlarmManager — no permission needed.
+     * Full alarm listing from the ColorOS clock app's private database
+     * (Eta parity, P7), falling back to the next system alarm via
+     * AlarmManager when root/the OEM database is unavailable.
      */
-    fun listAlarms(): JSONObject {
+    fun listAlarms(enabledOnly: Boolean = true, limit: Int = 20): JSONObject {
+        ColorOsExecutor(appCtx).readClockAlarms(enabledOnly, limit)?.let { return it }
         val am = appCtx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val next = runCatching { am.nextAlarmClock }.getOrNull()
         val items = JSONArray()

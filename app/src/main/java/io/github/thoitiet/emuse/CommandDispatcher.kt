@@ -10,6 +10,7 @@ import io.github.thoitiet.emuse.exec.InputExecutor
 import io.github.thoitiet.emuse.exec.ScreenExecutor
 import io.github.thoitiet.emuse.exec.SensitiveActionExecutor
 import io.github.thoitiet.emuse.exec.SensitiveReadExecutor
+import io.github.thoitiet.emuse.exec.ColorOsExecutor
 import io.github.thoitiet.emuse.exec.ShellExecutor
 import io.github.thoitiet.emuse.exec.SystemExecutor
 import io.github.thoitiet.emuse.exec.UiDumpExecutor
@@ -35,6 +36,7 @@ class CommandDispatcher(
     private val clipboard = ClipboardExecutor(appCtx)
     private val device = DeviceExecutor(appCtx)
     private val sensitiveRead = SensitiveReadExecutor(appCtx)
+    private val colorOs = ColorOsExecutor(appCtx)
     private val sensitiveAction = SensitiveActionExecutor(appCtx)
 
     init {
@@ -136,6 +138,15 @@ class CommandDispatcher(
             Cmds.LOGCAT_GET -> "n=${a.optInt("max_lines", 200)} q=${a.optString("query", "").take(12)}"
             Cmds.SETTING_GET -> "${a.optString("namespace", "")}.${a.optString("key", "")}"
             Cmds.DEVICE_ENVIRONMENT -> ""
+            Cmds.TIMER_ACTIVE_LIST -> "n=${a.optInt("limit", 20)}"
+
+            // P7 ColorOS-specific (queries truncated: overlay is user-visible)
+            Cmds.COLOROS_NOTES_SEARCH,
+            Cmds.COLOROS_RECORDINGS_SEARCH,
+            Cmds.RECORDING_SUMMARIES_SEARCH,
+            Cmds.COLOROS_MEMORIES_SEARCH,
+            Cmds.PERSONAL_ORDERS_SEARCH,
+            Cmds.SAVED_PLACES_SEARCH -> "q=${a.optString("query", "").take(12)} n=${a.optInt("limit", 10)}"
             Cmds.SETTING_SET -> "${a.optString("namespace", "")}.${a.optString("key", "")}"
             Cmds.DEVICE_STATE_SET ->
                 "${a.optString("target", "")}=${if (a.optBoolean("enabled", false)) "on" else "off"}"
@@ -294,7 +305,9 @@ class CommandDispatcher(
                 a.getInt("duration_seconds"),
                 a.optString("label").ifEmpty { null },
             )
-            Cmds.ALARM_LIST -> device.listAlarms()
+            Cmds.ALARM_LIST -> device.listAlarms(
+                a.optBoolean("enabled_only", true), a.optInt("limit", 20),
+            )
             Cmds.MEMORY_TOP_APPS -> device.topMemoryApps(a.optInt("limit", 10))
             Cmds.STORAGE_TOP_APPS -> device.topStorageApps(a.optInt("limit", 10))
 
@@ -317,6 +330,15 @@ class CommandDispatcher(
             Cmds.LOGCAT_GET -> sensitiveRead.getLogcat(a)
             Cmds.SETTING_GET -> sensitiveRead.getSetting(a)
             Cmds.DEVICE_ENVIRONMENT -> sensitiveRead.getDeviceEnvironment(a)
+
+            // P7: Eta-parity ColorOS-specific tools
+            Cmds.COLOROS_NOTES_SEARCH -> colorOs.searchColorOsNotes(a)
+            Cmds.COLOROS_RECORDINGS_SEARCH -> colorOs.searchColorOsRecordings(a)
+            Cmds.RECORDING_SUMMARIES_SEARCH -> colorOs.searchRecordingSummaries(a)
+            Cmds.COLOROS_MEMORIES_SEARCH -> colorOs.searchColorOsMemories(a)
+            Cmds.PERSONAL_ORDERS_SEARCH -> colorOs.searchPersonalOrders(a)
+            Cmds.SAVED_PLACES_SEARCH -> colorOs.searchSavedPlaces(a)
+            Cmds.TIMER_ACTIVE_LIST -> colorOs.listActiveTimers(a)
 
             // P6 sensitive-action
             Cmds.SETTING_SET -> sensitiveAction.setSetting(

@@ -67,6 +67,7 @@ val TOOL_GROUP_BY_NAME: Map<String, ToolGroup> = mapOf(
     "set_alarm" to ToolGroup.DEVICE_DIRECT,
     "set_timer" to ToolGroup.DEVICE_DIRECT,
     "list_alarms" to ToolGroup.DEVICE_DIRECT,
+    "list_active_timers" to ToolGroup.DEVICE_DIRECT,
     "top_memory_apps" to ToolGroup.DEVICE_DIRECT,
     "top_storage_apps" to ToolGroup.DEVICE_DIRECT,
 
@@ -89,6 +90,14 @@ val TOOL_GROUP_BY_NAME: Map<String, ToolGroup> = mapOf(
     "get_logcat" to ToolGroup.SENSITIVE_READ,
     "get_setting" to ToolGroup.SENSITIVE_READ,
     "get_device_environment" to ToolGroup.SENSITIVE_READ,
+
+    // P7: Eta-parity ColorOS-specific tools (personal data -> sensitive read)
+    "search_coloros_notes" to ToolGroup.SENSITIVE_READ,
+    "search_coloros_recordings" to ToolGroup.SENSITIVE_READ,
+    "search_recording_summaries" to ToolGroup.SENSITIVE_READ,
+    "search_coloros_memories" to ToolGroup.SENSITIVE_READ,
+    "search_personal_orders" to ToolGroup.SENSITIVE_READ,
+    "search_saved_places" to ToolGroup.SENSITIVE_READ,
     "app_list" to ToolGroup.DEVICE_DIRECT,
     "app_info" to ToolGroup.DEVICE_DIRECT,
     "wait" to ToolGroup.DEVICE_DIRECT,
@@ -175,6 +184,7 @@ val TOOL_NAME_BY_CMD: Map<String, String> = mapOf(
     Cmds.ALARM_SET to "set_alarm",
     Cmds.TIMER_SET to "set_timer",
     Cmds.ALARM_LIST to "list_alarms",
+    Cmds.TIMER_ACTIVE_LIST to "list_active_timers",
     Cmds.MEMORY_TOP_APPS to "top_memory_apps",
     Cmds.STORAGE_TOP_APPS to "top_storage_apps",
 
@@ -197,6 +207,14 @@ val TOOL_NAME_BY_CMD: Map<String, String> = mapOf(
     Cmds.LOGCAT_GET to "get_logcat",
     Cmds.SETTING_GET to "get_setting",
     Cmds.DEVICE_ENVIRONMENT to "get_device_environment",
+
+    // P7: Eta-parity ColorOS-specific tools
+    Cmds.COLOROS_NOTES_SEARCH to "search_coloros_notes",
+    Cmds.COLOROS_RECORDINGS_SEARCH to "search_coloros_recordings",
+    Cmds.RECORDING_SUMMARIES_SEARCH to "search_recording_summaries",
+    Cmds.COLOROS_MEMORIES_SEARCH to "search_coloros_memories",
+    Cmds.PERSONAL_ORDERS_SEARCH to "search_personal_orders",
+    Cmds.SAVED_PLACES_SEARCH to "search_saved_places",
 
     // P6: Eta-parity sensitive-action tools
     Cmds.SETTING_SET to "set_setting",
