@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import io.github.thoitiet.emuse.exec.ScreenCapture
@@ -47,6 +48,7 @@ class MuseService : Service() {
     private var reconnectDelayMs = 5000L
     private var connectGen = 0
     private var socketOpen = false
+    private var lastActivityMs = 0L
     private var fgTypes = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
 
     override fun onCreate() {
@@ -59,6 +61,18 @@ class MuseService : Service() {
             .build()
         running = true
         if (Prefs(this).overlayEnabled) FloatingOverlay.show(this)
+        // Watchdog: heal half-open sockets (e.g. server redeploy killed the
+        // TCP connection without a close frame). The generation guard in
+        // connect() makes this safe to call any time.
+        scope.launch {
+            while (running) {
+                delay(60_000)
+                if (!running) break
+                val stale = !socketOpen ||
+                    SystemClock.elapsedRealtime() - lastActivityMs > 45_000
+                if (stale) connect()
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -120,7 +134,9 @@ class MuseService : Service() {
             updateNotification("E-Muse: chưa cấu hình URL / API key")
             return
         }
-        if (socketOpen && ws != null) return // already connected
+        if (socketOpen && ws != null &&
+            SystemClock.elapsedRealtime() - lastActivityMs < 45_000
+        ) return // healthy connection already
         // https:// -> wss://, http:// -> ws://
         val wsUrl = httpUrl.replaceFirst("^http".toRegex(), "ws")
         updateNotification("E-Muse: đang kết nối…")
@@ -145,6 +161,7 @@ class MuseService : Service() {
             }
             reconnectDelayMs = 5000L
             socketOpen = true
+            lastActivityMs = SystemClock.elapsedRealtime()
             val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
             val hello = JSONObject()
                 .put("type", "hello")
@@ -159,6 +176,7 @@ class MuseService : Service() {
 
         override fun onMessage(webSocket: WebSocket, text: String) {
             if (!alive()) return
+            lastActivityMs = SystemClock.elapsedRealtime()
             try {
                 val o = JSONObject(text)
                 if (o.has("cmd")) dispatcher.dispatch(DeviceCommand.fromJson(o))
