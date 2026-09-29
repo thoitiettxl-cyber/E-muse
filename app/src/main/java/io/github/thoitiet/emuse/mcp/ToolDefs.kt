@@ -72,7 +72,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Set a volume stream directly; do not operate the volume GUI. percent 0 mutes the stream.",
         withDevice(
             "\"stream\":{\"type\":\"string\",\"enum\":[\"media\",\"alarm\",\"ring\",\"notification\"],\"description\":\"Volume stream.\"}," +
-                "\"percent\":{\"type\":\"number\",\"description\":\"0 to 100.\"}",
+                "\"percent\":{\"type\":\"integer\",\"description\":\"0 to 100.\"}",
             "\"stream\",\"percent\"",
         ),
         false, false, true, false, "write", "volume.set",
@@ -90,8 +90,8 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "set_alarm",
         "Create a system alarm directly; do not use the GUI. For relative times, convert with get_current_context first. hour/minute use the device local time. If the system does not accept a direct action, the clock UI is opened instead (mode ui_fallback).",
         withDevice(
-            "\"hour\":{\"type\":\"number\",\"description\":\"0 to 23.\"}," +
-                "\"minute\":{\"type\":\"number\",\"description\":\"0 to 59.\"}," +
+            "\"hour\":{\"type\":\"integer\",\"description\":\"0 to 23.\"}," +
+                "\"minute\":{\"type\":\"integer\",\"description\":\"0 to 59.\"}," +
                 "\"label\":{\"type\":\"string\",\"description\":\"Alarm label, up to 100 characters.\"}," +
                 "\"vibrate\":{\"type\":\"boolean\",\"description\":\"Whether to vibrate. Default true.\"}," +
                 "\"repeat_days\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\",\"sat\",\"sun\"]},\"description\":\"Repeat weekdays; omit for the next occurrence only.\"}",
@@ -103,7 +103,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "set_timer",
         "Create a system timer directly; do not use the GUI. If the system does not accept a direct action, the clock UI is opened instead (mode ui_fallback).",
         withDevice(
-            "\"duration_seconds\":{\"type\":\"number\",\"description\":\"Timer duration in seconds, 1 to 86400.\"}," +
+            "\"duration_seconds\":{\"type\":\"integer\",\"description\":\"Timer duration in seconds, 1 to 86400.\"}," +
                 "\"label\":{\"type\":\"string\",\"description\":\"Timer label, up to 100 characters.\"}",
             "\"duration_seconds\"",
         ),
@@ -114,7 +114,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "List alarms (id, hour, minutes, days, enabled, message) from the ColorOS clock app database; falls back to the next system alarm when root/the OEM database is unavailable.",
         withDevice(
             "\"enabled_only\":{\"type\":\"boolean\",\"description\":\"Only enabled alarms. Default true.\"}," +
-                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+                "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
         ),
         true, false, true, false, "query", "alarm.list",
     ),
@@ -122,7 +122,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "list_active_timers",
         "List active timers (description, duration, state, remaining/alert time) from the ColorOS clock app database. Needs root; ColorOS only.",
         withDevice(
-            "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+            "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
         ),
         true, false, true, false, "query", "timer.active_list",
     ),
@@ -131,7 +131,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search ColorOS notes and to-dos by title or body. Needs root; ColorOS Notes only.",
         withDevice(
             "\"query\":{\"type\":\"string\",\"description\":\"Title or body fragment. Omit to list all.\"}," +
-                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "coloros.notes_search",
     ),
@@ -140,7 +140,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search ordinary and call recordings in the ColorOS Recorder app (name, duration, type, file path). Needs root; ColorOS only.",
         withDevice(
             "\"query\":{\"type\":\"string\",\"description\":\"Name or path fragment. Omit to list all.\"}," +
-                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "coloros.recordings_search",
     ),
@@ -149,7 +149,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search transcription summaries and note content linked to ColorOS recordings. Needs root; ColorOS only.",
         withDevice(
             "\"query\":{\"type\":\"string\",\"description\":\"Summary content fragment. Omit to list all.\"}," +
-                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "coloros.recording_summaries_search",
     ),
@@ -158,7 +158,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search ColorOS system memories (collected info, bills, schedules, pickup codes, parcels, places, attachments). Needs root; ColorOS only.",
         withDevice(
             "\"query\":{\"type\":\"string\",\"description\":\"Memory text fragment. Omit to list recent.\"}," +
-                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "coloros.memories_search",
     ),
@@ -167,7 +167,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search food-delivery, shopping, parcel, ticket and travel orders recognized in ColorOS system memories. Needs root; ColorOS only.",
         withDevice(
             "\"query\":{\"type\":\"string\",\"description\":\"Order text fragment. Omit to list recent.\"}," +
-                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "coloros.personal_orders_search",
     ),
@@ -176,7 +176,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search places saved or recognized in ColorOS system memories. Needs root; ColorOS only.",
         withDevice(
             "\"query\":{\"type\":\"string\",\"description\":\"Place name or address fragment. Omit to list all.\"}," +
-                "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "coloros.saved_places_search",
     ),
@@ -184,7 +184,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "top_memory_apps",
         "List processes with the highest current memory usage (pid, process name, rss_bytes). Uses root ps when available, otherwise ActivityManager PSS.",
         withDevice(
-            "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+            "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "memory.top_apps",
     ),
@@ -192,7 +192,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "top_storage_apps",
         "List apps with the highest combined app+data+cache storage (package_name, total/app/data/cache bytes). Needs root (dumpsys diskstats).",
         withDevice(
-            "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+            "\"limit\":{\"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "storage.top_apps",
     ),
@@ -205,7 +205,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search contacts by name (display name, lookup key, phone flag, last update). Needs READ_CONTACTS.",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"Name fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "contacts.search",
     ),
@@ -214,7 +214,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search call history by number or name (date, duration, type, geocoded location). Needs READ_CALL_LOG.",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"Number or name fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "calllog.search",
     ),
@@ -223,7 +223,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search SMS messages by address or body (date, type, read flag). Needs READ_SMS.",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"Address or body fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "sms.search",
     ),
@@ -232,7 +232,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search calendar events by title, description or location (start/end, all-day, calendar). Needs READ_CALENDAR.",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"Title, description or location fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "calendar.search",
     ),
@@ -241,7 +241,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search photos and videos in MediaStore by file name or path (mime type, date, size). Needs at least one of READ_MEDIA_IMAGES/READ_MEDIA_VIDEO (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below); the granted kinds decide which media types are visible.",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"File name or path fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "media.search",
     ),
@@ -250,7 +250,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search audio files in MediaStore by title, artist or path (album, duration, size). Needs READ_MEDIA_AUDIO (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"Title, artist or path fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "audio.search",
     ),
@@ -259,7 +259,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search call/voice recordings in MediaStore by title or path (album, duration, size). Same as search_audio plus a 'Record*' path filter. Needs READ_MEDIA_AUDIO (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"Title or path fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "recordings.search",
     ),
@@ -268,7 +268,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search generic documents/other files in MediaStore by file name or path (mime type, size). Needs a READ_MEDIA_* permission (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"File name or path fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "files.search",
     ),
@@ -277,7 +277,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Search files in the Downloads collection by file name or path (mime type, size). API 29+. Needs a READ_MEDIA_* permission (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"File name or path fragment. Omit to list all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
         ),
         true, false, true, false, "query", "downloads.search",
     ),
@@ -292,8 +292,8 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "List recently foregrounded apps (package, app name, activity, resumed_at), newest first. Needs Usage access (Settings -> Special app access -> Usage access).",
         withDevice(
             "\"package_name\":{ \"type\":\"string\",\"description\":\"Filter to one package. Omit for all.\"}," +
-                "\"max_age_hours\":{ \"type\":\"number\",\"description\":\"Look-back window, 1 to 168 hours. Default 24.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+                "\"max_age_hours\":{ \"type\":\"integer\",\"description\":\"Look-back window, 1 to 168 hours. Default 24.\"}," +
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
         ),
         true, false, true, false, "query", "app.activity.recent",
     ),
@@ -301,8 +301,8 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "app_usage_summary",
         "Summarize foreground time per app (foreground_ms, last_used_at), most-used first. Needs Usage access (Settings -> Special app access -> Usage access).",
         withDevice(
-            "\"max_age_hours\":{ \"type\":\"number\",\"description\":\"Look-back window, 1 to 168 hours. Default 24.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+            "\"max_age_hours\":{ \"type\":\"integer\",\"description\":\"Look-back window, 1 to 168 hours. Default 24.\"}," +
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
         ),
         true, false, true, false, "query", "app.usage.summary",
     ),
@@ -311,7 +311,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "List active notifications (package, title, text) via root 'cmd notification'. Needs root; no manifest permission required.",
         withDevice(
             "\"package_name\":{ \"type\":\"string\",\"description\":\"Filter to one package. Omit for all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 20. Default 10.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 20. Default 10.\"}",
         ),
         true, false, true, false, "query", "notifications.recent",
     ),
@@ -320,7 +320,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "List saved Wi-Fi networks (ssid, password) from WifiConfigStore.xml via root. Needs root; no manifest permission required. Omit ssid to list all.",
         withDevice(
             "\"ssid\":{ \"type\":\"string\",\"description\":\"Filter to one SSID. Omit for all.\"}," +
-                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+                "\"limit\":{ \"type\":\"integer\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
         ),
         true, false, true, false, "query", "wifi.credentials",
     ),
@@ -328,7 +328,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "read_sms_code",
         "Extract recent one-time verification codes from incoming SMS (code, sender, timestamp_ms), matching against OTP/verification-code keywords. Needs READ_SMS.",
         withDevice(
-            "\"max_age_minutes\":{ \"type\":\"number\",\"description\":\"Look-back window, 1 to 1440 minutes. Default 10.\"}",
+            "\"max_age_minutes\":{ \"type\":\"integer\",\"description\":\"Look-back window, 1 to 1440 minutes. Default 10.\"}",
         ),
         true, false, true, false, "query", "sms.code.read",
     ),
@@ -336,7 +336,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "get_logcat",
         "Read device logs (logcat -d -v threadtime) via root, chronological order (oldest first). Needs root; no manifest permission required.",
         withDevice(
-            "\"max_lines\":{ \"type\":\"number\",\"description\":\"Max log lines, 20 to 500. Default 200.\"}," +
+            "\"max_lines\":{ \"type\":\"integer\",\"description\":\"Max log lines, 20 to 500. Default 200.\"}," +
                 "\"query\":{ \"type\":\"string\",\"description\":\"Case-insensitive filter. Omit for all.\"}",
         ),
         true, false, true, false, "query", "logcat.get",
@@ -394,7 +394,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         withDevice(
             "\"command\":{\"type\":\"string\",\"description\":\"Shell command to run.\"}," +
                 "\"asRoot\":{\"type\":\"boolean\",\"description\":\"Run with su (requires a rooted device). Default false.\"}," +
-                "\"timeoutMs\":{\"type\":\"number\",\"description\":\"Max wait in ms (1000-120000). Default 30000.\"}",
+                "\"timeoutMs\":{\"type\":\"integer\",\"description\":\"Max wait in ms (1000-120000). Default 30000.\"}",
             "\"command\"",
         ),
         false, true, false, false, "write", "shell.exec",
@@ -405,7 +405,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         withDevice(
             "\"system\":{\"type\":\"boolean\",\"description\":\"Include system apps. Default false.\"}," +
                 "\"query\":{\"type\":\"string\",\"description\":\"Fuzzy app name/package fragment. Omit to list all apps.\"}," +
-                "\"limit\":{\"type\":\"number\",\"description\":\"Max results when query is given, 1 to 20. Default 10.\"}",
+                "\"limit\":{\"type\":\"integer\",\"description\":\"Max results when query is given, 1 to 20. Default 10.\"}",
         ),
         true, false, true, false, "query", "app.list",
     ),
@@ -516,8 +516,8 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         withDevice(
             "\"elementId\":{\"type\":\"string\",\"description\":\"Element id from ui_snapshot (e.g. \\\"e12\\\").\"}," +
                 "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Optional; when given and stale, the tap is rejected.\"}," +
-                "\"x\":{\"type\":\"number\",\"description\":\"X coordinate in pixels.\"}," +
-                "\"y\":{\"type\":\"number\",\"description\":\"Y coordinate in pixels.\"}",
+                "\"x\":{\"type\":\"integer\",\"description\":\"X coordinate in pixels.\"}," +
+                "\"y\":{\"type\":\"integer\",\"description\":\"Y coordinate in pixels.\"}",
         ),
         false, false, false, false, "write", "input.tap",
     ),
@@ -535,9 +535,9 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "input_swipe",
         "Swipe from (x1, y1) to (x2, y2) in pixels over durationMs milliseconds.",
         withDevice(
-            "\"x1\":{\"type\":\"number\"},\"y1\":{\"type\":\"number\"}," +
-                "\"x2\":{\"type\":\"number\"},\"y2\":{\"type\":\"number\"}," +
-                "\"durationMs\":{\"type\":\"number\",\"description\":\"Gesture duration in ms. Default 300.\"}",
+            "\"x1\":{\"type\":\"integer\"},\"y1\":{\"type\":\"integer\"}," +
+                "\"x2\":{\"type\":\"integer\"},\"y2\":{\"type\":\"integer\"}," +
+                "\"durationMs\":{\"type\":\"integer\",\"description\":\"Gesture duration in ms. Default 300.\"}",
             "\"x1\",\"y1\",\"x2\",\"y2\"",
         ),
         false, false, false, false, "write", "input.swipe",
@@ -546,8 +546,8 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "tap_area",
         "Tap the center of a rectangle. Prefer this for large buttons, large list items, and visible text regions. Coordinates in pixels.",
         withDevice(
-            "\"x1\":{\"type\":\"number\"},\"y1\":{\"type\":\"number\"}," +
-                "\"x2\":{\"type\":\"number\"},\"y2\":{\"type\":\"number\"}",
+            "\"x1\":{\"type\":\"integer\"},\"y1\":{\"type\":\"integer\"}," +
+                "\"x2\":{\"type\":\"integer\"},\"y2\":{\"type\":\"integer\"}",
             "\"x1\",\"y1\",\"x2\",\"y2\"",
         ),
         false, false, false, false, "write", "input.tap_area",
@@ -556,8 +556,8 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "long_press",
         "Long-press a screen point in pixels. Accessibility gesture first, root 'input swipe' fallback. Never replayed when the gesture outcome is unknown.",
         withDevice(
-            "\"x\":{\"type\":\"number\"},\"y\":{\"type\":\"number\"}," +
-                "\"durationMs\":{\"type\":\"number\",\"description\":\"Long-press duration, 300 to 3000. Default 800.\"}",
+            "\"x\":{\"type\":\"integer\"},\"y\":{\"type\":\"integer\"}," +
+                "\"durationMs\":{\"type\":\"integer\",\"description\":\"Long-press duration, 300 to 3000. Default 800.\"}",
             "\"x\",\"y\"",
         ),
         false, false, false, false, "write", "input.long_press",
@@ -568,7 +568,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         withDevice(
             "\"elementId\":{\"type\":\"string\",\"description\":\"Element id from ui_snapshot (e.g. \\\"e12\\\").\"}," +
                 "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Optional; when given and stale, nothing is pressed.\"}," +
-                "\"durationMs\":{\"type\":\"number\",\"description\":\"Long-press duration, 300 to 3000. Default 800.\"}",
+                "\"durationMs\":{\"type\":\"integer\",\"description\":\"Long-press duration, 300 to 3000. Default 800.\"}",
             "\"elementId\"",
         ),
         false, false, false, false, "write", "input.long_press_element",
@@ -597,7 +597,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "input_key",
         "Send a key event: by Android key code, or by named button (BACK/HOME/ENTER/RECENTS/PASTE/NOTIFICATIONS/QUICK_SETTINGS). Named buttons prefer accessibility global actions; key codes fall back to 'input keyevent'.",
         withDevice(
-            "\"keyCode\":{\"type\":\"number\",\"description\":\"Android KeyEvent key code (e.g. 3 = HOME, 4 = BACK, 66 = ENTER).\"}," +
+            "\"keyCode\":{\"type\":\"integer\",\"description\":\"Android KeyEvent key code (e.g. 3 = HOME, 4 = BACK, 66 = ENTER).\"}," +
                 "\"button\":{\"type\":\"string\",\"enum\":[\"BACK\",\"HOME\",\"ENTER\",\"RECENTS\",\"PASTE\",\"NOTIFICATIONS\",\"QUICK_SETTINGS\"],\"description\":\"Named button; takes precedence over keyCode when both are given.\"}",
         ),
         false, false, false, false, "write", "input.key",
@@ -667,7 +667,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         withDevice(
             "\"query\":{\"type\":\"string\",\"description\":\"Only return elements whose text or description contains this string (case-insensitive).\"}," +
                 "\"compact\":{\"type\":\"boolean\",\"description\":\"Omit element bounds to shrink the response. Default false.\"}," +
-                "\"maxNodes\":{\"type\":\"number\",\"description\":\"Max elements to walk (1-2000). Default 500.\"}",
+                "\"maxNodes\":{\"type\":\"integer\",\"description\":\"Max elements to walk (1-2000). Default 500.\"}",
         ),
         true, false, true, false, "query", "ui.snapshot",
     ),
@@ -677,7 +677,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         withDevice(
             "\"include_screenshot\":{\"type\":\"boolean\",\"description\":\"Attach the current screen image. Default false. Enable when UI nodes are not enough (canvas/map/visual content).\"}," +
                 "\"include_ui_tree\":{\"type\":\"boolean\",\"description\":\"Include the accessibility UI tree. Default true.\"}," +
-                "\"max_nodes\":{\"type\":\"number\",\"description\":\"Max UI nodes in the tree (1-120). Default 60.\"}",
+                "\"max_nodes\":{\"type\":\"integer\",\"description\":\"Max UI nodes in the tree (1-120). Default 60.\"}",
         ),
         true, false, true, false, "query", "ui.observe",
     ),
@@ -686,7 +686,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Wait until a text appears anywhere in the accessibility tree (e.g. after tapping something that loads). The device polls every 350ms and returns in ONE call — no manual snapshot polling. Matching is case-insensitive and diacritic-safe for Vietnamese.",
         withDevice(
             "\"text\":{\"type\":\"string\",\"description\":\"Text to wait for.\"}," +
-                "\"timeoutMs\":{\"type\":\"number\",\"description\":\"Max wait in ms (1000-60000). Default 10000.\"}",
+                "\"timeoutMs\":{\"type\":\"integer\",\"description\":\"Max wait in ms (1000-60000). Default 10000.\"}",
             "\"text\"",
         ),
         true, false, true, false, "query", "ui.wait_text",
@@ -696,7 +696,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Wait until the given Android package is in the foreground. Use after app_start/open_uri to confirm the target app opened. The device polls every 350ms and returns in ONE call.",
         withDevice(
             "\"package_name\":{\"type\":\"string\",\"description\":\"Application package name to wait for.\"}," +
-                "\"timeoutMs\":{\"type\":\"number\",\"description\":\"Max wait in ms (500-60000). Default 10000.\"}",
+                "\"timeoutMs\":{\"type\":\"integer\",\"description\":\"Max wait in ms (500-60000). Default 10000.\"}",
             "\"package_name\"",
         ),
         true, false, true, false, "query", "ui.wait_package",
@@ -705,7 +705,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "wait",
         "Wait for a duration so animations, network loads, or page transitions can finish. Do not use this instead of the verifiable waits wait_for_text/wait_for_package.",
         withDevice(
-            "\"durationMs\":{\"type\":\"number\",\"description\":\"Wait duration, 100 to 30000. Default 1000.\"}",
+            "\"durationMs\":{\"type\":\"integer\",\"description\":\"Wait duration, 100 to 30000. Default 1000.\"}",
         ),
         true, false, true, false, "query", "input.wait",
     ),
