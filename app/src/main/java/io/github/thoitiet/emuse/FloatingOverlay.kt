@@ -126,7 +126,7 @@ object FloatingOverlay {
             addView(inner, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(dotView)
-            setOnTouchListener(DragTouchListener())
+            setOnTouchListener(DragTouchListener({ wm }, { bubble }, { bubbleParams }))
             setOnClickListener { togglePanel() }
         }
     }
@@ -216,7 +216,11 @@ object FloatingOverlay {
     private fun Int.dp(ctx: Context): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, toFloat(), ctx.resources.displayMetrics).toInt()
 
-    private inner class DragTouchListener : View.OnTouchListener {
+    private class DragTouchListener(
+        private val getWm: () -> WindowManager?,
+        private val getBubble: () -> FrameLayout?,
+        private val getParams: () -> WindowManager.LayoutParams?,
+    ) : View.OnTouchListener {
         private var startX = 0
         private var startY = 0
         private var downRawX = 0f
@@ -224,7 +228,7 @@ object FloatingOverlay {
         private var moved = false
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
-            val p = bubbleParams ?: return false
+            val p = getParams() ?: return false
             when (e.action) {
                 MotionEvent.ACTION_DOWN -> {
                     startX = p.x; startY = p.y
@@ -237,7 +241,7 @@ object FloatingOverlay {
                     if (dx * dx + dy * dy > 100) moved = true
                     p.x = startX + dx
                     p.y = startY + dy
-                    wm?.updateViewLayout(bubble, p)
+                    getWm()?.updateViewLayout(getBubble(), p)
                 }
                 MotionEvent.ACTION_UP -> {
                     if (moved) return true // swallow click after drag
