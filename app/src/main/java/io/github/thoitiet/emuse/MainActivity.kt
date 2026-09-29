@@ -285,7 +285,7 @@ class MainActivity : AppCompatActivity() {
         val tunCard = card()
         tunnelSummary = TextView(this) // placeholder, replaced below
         val tunPair = switchRow(tunCard, "Tunnel", "") { checked ->
-            persistInputs()
+            persistInputs(applyLive = false)
             prefs.tunnelEnabled = checked
             ContextCompat.startForegroundService(
                 this,
@@ -391,13 +391,26 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun persistInputs() {
+    private fun persistInputs(applyLive: Boolean = true) {
         val prefs = Prefs(this)
         if (::apiKeyInput.isInitialized) prefs.apiKey = apiKeyInput.text.toString().trim()
-        if (::tunnelTokenInput.isInitialized) prefs.tunnelToken = tunnelTokenInput.text.toString().trim()
-        if (::tunnelHostInput.isInitialized) {
-            prefs.tunnelHostname = tunnelHostInput.text.toString().trim()
-                .ifEmpty { "" }
+        val newToken =
+            if (::tunnelTokenInput.isInitialized) tunnelTokenInput.text.toString().trim()
+            else prefs.tunnelToken
+        val newHost =
+            if (::tunnelHostInput.isInitialized) tunnelHostInput.text.toString().trim().ifEmpty { "" }
+            else prefs.tunnelHostname
+        val changed = newToken != prefs.tunnelToken || newHost != prefs.tunnelHostname
+        prefs.tunnelToken = newToken
+        prefs.tunnelHostname = newHost
+        // Bug 6: token/hostname đổi khi tunnel đang chạy -> báo service restart để apply.
+        // (Switch Tunnel tự gọi ACTION_SET_TUNNEL nên truyền applyLive=false để khỏi restart thừa.)
+        if (applyLive && changed && prefs.tunnelEnabled) {
+            val intent = Intent(this, MuseService::class.java)
+                .setAction(MuseService.ACTION_RESTART_TUNNEL)
+            if (MuseService.running) startService(intent)
+            else ContextCompat.startForegroundService(this, intent)
+            toast("Đã đổi cấu hình tunnel — đang restart…")
         }
     }
 
