@@ -81,6 +81,10 @@ class MuseAccessibilityService : AccessibilityService() {
     fun tap(x: Float, y: Float): GestureOutcome =
         gesture(Path().apply { moveTo(x, y) }, 50)
 
+    /** Long-press = a tap stroke held for [durationMs]; same no-blind-replay contract as [tap]. */
+    fun longPress(x: Float, y: Float, durationMs: Long): GestureOutcome =
+        gesture(Path().apply { moveTo(x, y) }, durationMs.coerceAtLeast(300))
+
     fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long): GestureOutcome =
         gesture(
             Path().apply { moveTo(x1, y1); lineTo(x2, y2) },

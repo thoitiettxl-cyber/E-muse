@@ -59,6 +59,15 @@ object InputExecutor {
         return res
     }
 
+    /** Eta's tap_area: tap the center of a rectangle (for large buttons/list items). */
+    fun tapArea(x1: Int, y1: Int, x2: Int, y2: Int): JSONObject {
+        DeviceScreen.validatePoint(x1, y1)
+        DeviceScreen.validatePoint(x2, y2)
+        require(x2 > x1 && y2 > y1) { "invalid area: ($x1,$y1)-($x2,$y2)" }
+        return tap((x1 + x2) / 2, (y1 + y2) / 2)
+            .put("area", "[$x1,$y1][$x2,$y2]")
+    }
+
     fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Int): JSONObject {
         DeviceScreen.validatePoint(x1, y1)
         DeviceScreen.validatePoint(x2, y2)
@@ -84,6 +93,55 @@ object InputExecutor {
         val res = shellOrThrow(RootCommands.inputSwipe(x1, y1, x2, y2, durationMs), "swipe")
         if (res.optBoolean("ok")) settleAfter("swipe")
         return res
+    }
+
+    /**
+     * Eta's long_press: accessibility long-press gesture first, root
+     * `input swipe x y x y <duration>` as fallback. Same no-blind-replay
+     * contract as [tap]: UNKNOWN outcome is never replayed.
+     */
+    fun longPress(x: Int, y: Int, durationMs: Int): JSONObject {
+        DeviceScreen.validatePoint(x, y)
+        val duration = durationMs.coerceIn(300, 3_000)
+        val svc = service()
+        if (svc != null) {
+            when (svc.longPress(x.toFloat(), y.toFloat(), duration.toLong())) {
+                GestureOutcome.DISPATCHED -> {
+                    settleAfter("long_press")
+                    return JSONObject().put("ok", true).put("via", "accessibility")
+                }
+                GestureOutcome.NOT_STARTED -> { /* fall through to shell */ }
+                GestureOutcome.UNKNOWN -> return JSONObject()
+                    .put("ok", false)
+                    .put("code", "ACTION_OUTCOME_UNKNOWN")
+                    .put("via", "accessibility")
+                    .put(
+                        "note",
+                        "gesture outcome unknown (timeout/cancelled); re-observe " +
+                            "before retrying — do NOT replay",
+                    )
+            }
+        }
+        val res = shellOrThrow(RootCommands.inputLongPress(x, y, duration), "long_press")
+        if (res.optBoolean("ok")) settleAfter("long_press")
+        return res
+    }
+
+    /**
+     * Eta's scroll: content-browsing direction mapped to a screen swipe.
+     * down = show content below (swipe up), up = show content above
+     * (swipe down), left/right analogously.
+     */
+    fun scroll(direction: String): JSONObject {
+        val (w, h) = DeviceScreen.size()
+        if (w <= 0 || h <= 0) throw IllegalStateException("unknown screen size")
+        return when (direction.lowercase()) {
+            "down" -> swipe(w / 2, (h * 0.75).toInt(), w / 2, (h * 0.25).toInt(), 500)
+            "up" -> swipe(w / 2, (h * 0.25).toInt(), w / 2, (h * 0.75).toInt(), 500)
+            "left" -> swipe((w * 0.25).toInt(), h / 2, (w * 0.75).toInt(), h / 2, 500)
+            "right" -> swipe((w * 0.75).toInt(), h / 2, (w * 0.25).toInt(), h / 2, 500)
+            else -> throw IllegalArgumentException("direction must be up/down/left/right")
+        }.put("direction", direction.lowercase())
     }
 
     fun key(keyCode: Int): JSONObject {

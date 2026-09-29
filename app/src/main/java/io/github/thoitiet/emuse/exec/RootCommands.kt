@@ -27,6 +27,13 @@ object RootCommands {
     fun inputSwipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Int): String =
         "input swipe $x1 $y1 $x2 $y2 ${durationMs.coerceIn(50, 10_000)}"
 
+    /**
+     * Long-press via the shell: a swipe whose start and end are the same
+     * point (Eta's RootShellDeviceController.longPress fallback).
+     */
+    fun inputLongPress(x: Int, y: Int, durationMs: Int): String =
+        "input swipe $x $y $x $y ${durationMs.coerceIn(300, 3_000)}"
+
     fun inputKey(keyCode: Int): String {
         require(keyCode in 0..300) { "invalid keyCode: $keyCode" }
         return "input keyevent $keyCode"
@@ -95,7 +102,7 @@ fun settleAfter(tool: String) {
     val delayMs = when (tool) {
         "tap", "key" -> 350L
         "swipe" -> 650L
-        "text" -> 500L
+        "text", "long_press" -> 500L
         else -> 250L
     }
     try {

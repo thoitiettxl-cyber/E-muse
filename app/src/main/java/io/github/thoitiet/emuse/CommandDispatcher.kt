@@ -64,7 +64,12 @@ class CommandDispatcher(
             Cmds.APP_START -> a.optString("package").ifEmpty { a.optString("action") }
             Cmds.FILE_LIST, Cmds.FILE_PULL, Cmds.FILE_PUSH, Cmds.FILE_DELETE -> a.optString("path")
             Cmds.INPUT_TAP -> "(${a.optInt("x")}, ${a.optInt("y")})"
+            Cmds.INPUT_TAP_AREA -> "(${a.optInt("x1")},${a.optInt("y1")})-(${a.optInt("x2")},${a.optInt("y2")})"
             Cmds.INPUT_TAP_OBSERVE -> "element=${a.optString("elementId")}"
+            Cmds.INPUT_LONG_PRESS -> "(${a.optInt("x")}, ${a.optInt("y")}) ${a.optInt("durationMs", 800)}ms"
+            Cmds.INPUT_LONG_PRESS_ELEMENT -> "element=${a.optString("elementId")}"
+            Cmds.INPUT_SCROLL -> a.optString("direction")
+            Cmds.INPUT_SCROLL_ELEMENT -> "element=${a.optString("elementId")} ${a.optString("direction")}"
             Cmds.UI_WAIT_TEXT -> a.optString("text").take(20)
             Cmds.INPUT_TEXT -> a.optString("text").take(20)
             Cmds.INPUT_KEY -> "keyCode=${a.optInt("keyCode")}"
@@ -112,6 +117,10 @@ class CommandDispatcher(
                 if (elementId != null) UiSnapshotter.tapElement(elementId, obsId)
                 else InputExecutor.tap(a.getInt("x"), a.getInt("y"))
             }
+            Cmds.INPUT_TAP_AREA -> InputExecutor.tapArea(
+                a.getInt("x1"), a.getInt("y1"),
+                a.getInt("x2"), a.getInt("y2"),
+            )
             Cmds.INPUT_TAP_OBSERVE -> UiSnapshotter.tapAndObserve(
                 a.getString("elementId"),
                 a.optString("observationId").ifEmpty { null },
@@ -120,6 +129,21 @@ class CommandDispatcher(
                 a.getInt("x1"), a.getInt("y1"),
                 a.getInt("x2"), a.getInt("y2"),
                 a.optInt("durationMs", 300),
+            )
+            Cmds.INPUT_LONG_PRESS -> InputExecutor.longPress(
+                a.getInt("x"), a.getInt("y"),
+                a.optInt("durationMs", 800),
+            )
+            Cmds.INPUT_LONG_PRESS_ELEMENT -> UiSnapshotter.longPressElement(
+                a.getString("elementId"),
+                a.optString("observationId").ifEmpty { null },
+                a.optInt("durationMs", 800),
+            )
+            Cmds.INPUT_SCROLL -> InputExecutor.scroll(a.getString("direction"))
+            Cmds.INPUT_SCROLL_ELEMENT -> UiSnapshotter.scrollElement(
+                a.getString("elementId"),
+                a.optString("observationId").ifEmpty { null },
+                a.getString("direction"),
             )
             Cmds.INPUT_KEY -> InputExecutor.key(a.getInt("keyCode"))
             Cmds.INPUT_TEXT -> InputExecutor.text(a.getString("text"))

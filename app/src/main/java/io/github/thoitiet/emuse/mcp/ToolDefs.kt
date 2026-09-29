@@ -184,6 +184,57 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         false, false, false, false, "write", "input.swipe",
     ),
     ToolDef(
+        "tap_area",
+        "Tap the center of a rectangle. Prefer this for large buttons, large list items, and visible text regions. Coordinates in pixels.",
+        withDevice(
+            "\"x1\":{\"type\":\"number\"},\"y1\":{\"type\":\"number\"}," +
+                "\"x2\":{\"type\":\"number\"},\"y2\":{\"type\":\"number\"}",
+            "\"x1\",\"y1\",\"x2\",\"y2\"",
+        ),
+        false, false, false, false, "write", "input.tap_area",
+    ),
+    ToolDef(
+        "long_press",
+        "Long-press a screen point in pixels. Accessibility gesture first, root 'input swipe' fallback. Never replayed when the gesture outcome is unknown.",
+        withDevice(
+            "\"x\":{\"type\":\"number\"},\"y\":{\"type\":\"number\"}," +
+                "\"durationMs\":{\"type\":\"number\",\"description\":\"Long-press duration, 300 to 3000. Default 800.\"}",
+            "\"x\",\"y\"",
+        ),
+        false, false, false, false, "write", "input.long_press",
+    ),
+    ToolDef(
+        "long_press_element",
+        "Long-press a UI element from a ui_snapshot (elementId). Tries ACTION_LONG_CLICK on the live node first, then the element center. Pass observationId to reject stale screens.",
+        withDevice(
+            "\"elementId\":{\"type\":\"string\",\"description\":\"Element id from ui_snapshot (e.g. \\\"e12\\\").\"}," +
+                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Optional; when given and stale, nothing is pressed.\"}," +
+                "\"durationMs\":{\"type\":\"number\",\"description\":\"Long-press duration, 300 to 3000. Default 800.\"}",
+            "\"elementId\"",
+        ),
+        false, false, false, false, "write", "input.long_press_element",
+    ),
+    ToolDef(
+        "scroll",
+        "Scroll the current screen in content-browsing direction: down shows content below, up shows content above, left shows content to the left, right shows content to the right.",
+        withDevice(
+            "\"direction\":{\"type\":\"string\",\"enum\":[\"up\",\"down\",\"left\",\"right\"]}",
+            "\"direction\"",
+        ),
+        false, false, false, false, "write", "input.scroll",
+    ),
+    ToolDef(
+        "scroll_element",
+        "Scroll a scrollable UI element from a ui_snapshot (elementId) in content-browsing direction: down shows content below, up shows content above, left shows content to the left, right shows content to the right. Pass observationId to reject stale screens.",
+        withDevice(
+            "\"elementId\":{\"type\":\"string\",\"description\":\"Scrollable element id from ui_snapshot (e.g. \\\"e12\\\").\"}," +
+                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Optional; when given and stale, nothing is scrolled.\"}," +
+                "\"direction\":{\"type\":\"string\",\"enum\":[\"up\",\"down\",\"left\",\"right\"]}",
+            "\"elementId\",\"direction\"",
+        ),
+        false, false, false, false, "write", "input.scroll_element",
+    ),
+    ToolDef(
         "input_key",
         "Send a key event by Android key code (e.g. 3 = HOME, 4 = BACK, 66 = ENTER).",
         withDevice(

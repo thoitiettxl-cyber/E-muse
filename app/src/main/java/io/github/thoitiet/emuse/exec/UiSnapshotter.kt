@@ -177,6 +177,84 @@ object UiSnapshotter {
     }
 
     /**
+     * Eta's long_press_element: ACTION_LONG_CLICK on the cached live node
+     * first; falls back to a coordinate long-press at the element center.
+     */
+    @Synchronized
+    fun longPressElement(
+        id: String,
+        observationId: String? = null,
+        durationMs: Int = 800,
+    ): JSONObject {
+        checkFresh(observationId)
+        val duration = durationMs.coerceIn(300, 3_000)
+        val node = cache[id]
+        if (node != null) {
+            val ok = runCatching {
+                node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
+            }.getOrDefault(false)
+            if (ok) {
+                settleAfter("long_press")
+                return JSONObject().put("ok", true).put("via", "node-long-click").put("id", id)
+            }
+        }
+        val b = cacheBounds[id]
+        if (b != null && b.width() > 0 && b.height() > 0) {
+            val res = InputExecutor.longPress(b.centerX(), b.centerY(), duration)
+            res.put("id", id).put("via", (res.optString("via") + "+element-center"))
+            return res
+        }
+        throw IllegalStateException("unknown element id: $id (take a fresh ui_snapshot first)")
+    }
+
+    /**
+     * Eta's scroll_element: scroll a scrollable node in content-browsing
+     * direction. Tries the node's scroll action first (forward/backward for
+     * up/down, left/right for horizontal); falls back to a swipe inside the
+     * element bounds.
+     */
+    @Synchronized
+    fun scrollElement(
+        id: String,
+        observationId: String? = null,
+        direction: String,
+    ): JSONObject {
+        checkFresh(observationId)
+        val dir = direction.lowercase()
+        val action = when (dir) {
+            "down" -> AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+            "up" -> AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+            "left" -> AccessibilityNodeInfo.ACTION_SCROLL_LEFT
+            "right" -> AccessibilityNodeInfo.ACTION_SCROLL_RIGHT
+            else -> throw IllegalArgumentException("direction must be up/down/left/right")
+        }
+        val node = cache[id]
+        if (node != null) {
+            val ok = runCatching { node.performAction(action) }.getOrDefault(false)
+            if (ok) {
+                settleAfter("swipe")
+                return JSONObject()
+                    .put("ok", true).put("via", "node-scroll")
+                    .put("id", id).put("direction", dir)
+            }
+        }
+        val b = cacheBounds[id]
+            ?: throw IllegalStateException("unknown element id: $id (take a fresh ui_snapshot first)")
+        // Fallback: swipe inside the element bounds in content-browsing direction.
+        val cx = b.centerX()
+        val cy = b.centerY()
+        val res = when (dir) {
+            "down" -> InputExecutor.swipe(cx, b.top + (b.height() * 3 / 4), cx, b.top + (b.height() / 4), 500)
+            "up" -> InputExecutor.swipe(cx, b.top + (b.height() / 4), cx, b.top + (b.height() * 3 / 4), 500)
+            "left" -> InputExecutor.swipe(b.left + (b.width() / 4), cy, b.left + (b.width() * 3 / 4), cy, 500)
+            else -> InputExecutor.swipe(b.left + (b.width() * 3 / 4), cy, b.left + (b.width() / 4), cy, 500)
+        }
+        res.put("id", id).put("direction", dir)
+            .put("via", (res.optString("via") + "+element-bounds"))
+        return res
+    }
+
+    /**
      * T1.1: tap, settle, then a fresh snapshot — act + verify in one turn.
      * Returns `{tap: {...}, snapshot: {...}}`.
      */
