@@ -1,6 +1,7 @@
 package io.github.thoitiet.emuse.exec
 
 import android.graphics.Rect
+import android.os.Bundle
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 import io.github.thoitiet.emuse.MuseAccessibilityService
@@ -252,6 +253,27 @@ object UiSnapshotter {
         res.put("id", id).put("direction", dir)
             .put("via", (res.optString("via") + "+element-bounds"))
         return res
+    }
+
+    /**
+     * Eta's replace_text on a specific element: ACTION_SET_TEXT on the cached
+     * live node. Used by InputExecutor.replaceText when an elementId is given.
+     */
+    @Synchronized
+    fun setElementText(id: String, observationId: String? = null, text: String): JSONObject {
+        checkFresh(observationId)
+        require(text.length <= 4_000) { "text too long (max 4000)" }
+        val node = cache[id]
+            ?: throw IllegalStateException("unknown element id: $id (take a fresh ui_snapshot first)")
+        val ok = runCatching {
+            val args = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+            }
+            node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        }.getOrDefault(false)
+        if (!ok) throw IllegalStateException("ACTION_SET_TEXT failed on element $id")
+        settleAfter("text")
+        return JSONObject().put("ok", true).put("via", "node-set-text").put("id", id)
     }
 
     /**

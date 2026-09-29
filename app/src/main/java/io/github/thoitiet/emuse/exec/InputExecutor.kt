@@ -160,24 +160,28 @@ object InputExecutor {
             throw IllegalArgumentException("text empty or too long (max 500)")
         }
         val root = service()?.rootInActiveWindow
-        val focused = root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        if (focused != null) {
-            try {
-                if (focused.isEditable) {
-                    val args = Bundle().apply {
-                        putCharSequence(
-                            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                            text,
-                        )
+        try {
+            val focused = root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            if (focused != null) {
+                try {
+                    if (focused.isEditable) {
+                        val args = Bundle().apply {
+                            putCharSequence(
+                                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                                text,
+                            )
+                        }
+                        if (focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
+                            settleAfter("text")
+                            return JSONObject().put("ok", true).put("via", "accessibility")
+                        }
                     }
-                    if (focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
-                        settleAfter("text")
-                        return JSONObject().put("ok", true).put("via", "accessibility")
-                    }
+                } finally {
+                    focused.recycle()
                 }
-            } finally {
-                focused.recycle()
             }
+        } finally {
+            root?.recycle()
         }
         // Fallback: root `input text` with safe quoting. Platform limits apply
         // (no Unicode) — same caveat Eta documents by refusing this path.
@@ -185,4 +189,50 @@ object InputExecutor {
         if (res.optBoolean("ok")) settleAfter("text")
         return res
     }
+
+    /**
+     * Eta's replace_text: ACTION_SET_TEXT on the focused field (or a specific
+     * element from ui_snapshot). No shell fallback — `input text` appends and
+     * cannot replace, and unreadable fields (passwords) refuse reconstruction.
+     */
+    fun replaceText(
+        text: String,
+        elementId: String? = null,
+        observationId: String? = null,
+    ): JSONObject {
+        require(text.length <= 4_000) { "text too long (max 4000)" }
+        if (elementId != null) return UiSnapshotter.setElementText(elementId, observationId, text)
+        val svc = service()
+            ?: throw IllegalStateException("replace_text needs the accessibility service")
+        val root = svc.rootInActiveWindow
+            ?: throw IllegalStateException("no active window")
+        try {
+            val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                ?: throw IllegalStateException("replace_text needs a focused field (or pass elementId)")
+            try {
+                if (!focused.isEditable) {
+                    throw IllegalStateException("focused node is not editable")
+                }
+                val args = Bundle().apply {
+                    putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                        text,
+                    )
+                }
+                if (!focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
+                    throw IllegalStateException("ACTION_SET_TEXT failed on the focused field")
+                }
+                settleAfter("text")
+                return JSONObject().put("ok", true).put("via", "accessibility")
+            } finally {
+                focused.recycle()
+            }
+        } finally {
+            root.recycle()
+        }
+    }
+
+    /** Eta's clear_text: replace with the empty string. */
+    fun clearText(elementId: String? = null, observationId: String? = null): JSONObject =
+        replaceText("", elementId, observationId)
 }

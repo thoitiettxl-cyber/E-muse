@@ -3,6 +3,7 @@ package io.github.thoitiet.emuse
 import android.content.Context
 import android.os.Build
 import io.github.thoitiet.emuse.exec.AppExecutor
+import io.github.thoitiet.emuse.exec.ClipboardExecutor
 import io.github.thoitiet.emuse.exec.FileExecutor
 import io.github.thoitiet.emuse.exec.InputExecutor
 import io.github.thoitiet.emuse.exec.ScreenExecutor
@@ -26,6 +27,7 @@ class CommandDispatcher(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val apps = AppExecutor(appCtx)
     private val files = FileExecutor(appCtx)
+    private val clipboard = ClipboardExecutor(appCtx)
 
     init {
         ShellExecutor.reset()
@@ -72,6 +74,11 @@ class CommandDispatcher(
             Cmds.INPUT_SCROLL_ELEMENT -> "element=${a.optString("elementId")} ${a.optString("direction")}"
             Cmds.UI_WAIT_TEXT -> a.optString("text").take(20)
             Cmds.INPUT_TEXT -> a.optString("text").take(20)
+            Cmds.INPUT_REPLACE_TEXT -> a.optString("text").take(20)
+            Cmds.INPUT_CLEAR_TEXT -> "element=${a.optString("elementId")}"
+            Cmds.INPUT_PASTE -> a.optString("text").take(20)
+            Cmds.CLIPBOARD_SET -> a.optString("text").take(20)
+            Cmds.CLIPBOARD_GET -> ""
             Cmds.INPUT_KEY -> "keyCode=${a.optInt("keyCode")}"
             else -> ""
         }.take(40)
@@ -147,6 +154,18 @@ class CommandDispatcher(
             )
             Cmds.INPUT_KEY -> InputExecutor.key(a.getInt("keyCode"))
             Cmds.INPUT_TEXT -> InputExecutor.text(a.getString("text"))
+            Cmds.INPUT_REPLACE_TEXT -> InputExecutor.replaceText(
+                a.getString("text"),
+                a.optString("elementId").ifEmpty { null },
+                a.optString("observationId").ifEmpty { null },
+            )
+            Cmds.INPUT_CLEAR_TEXT -> InputExecutor.clearText(
+                a.optString("elementId").ifEmpty { null },
+                a.optString("observationId").ifEmpty { null },
+            )
+            Cmds.INPUT_PASTE -> clipboard.paste(a.getString("text"))
+            Cmds.CLIPBOARD_SET -> clipboard.set(a.getString("text"))
+            Cmds.CLIPBOARD_GET -> clipboard.get()
 
             Cmds.UI_DUMP -> UiDumpExecutor.dump()
             Cmds.UI_SNAPSHOT -> UiSnapshotter.snapshot(

@@ -253,6 +253,50 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         false, false, false, false, "write", "input.text",
     ),
     ToolDef(
+        "replace_text",
+        "Replace the text of the currently focused field or a specified editable element (elementId from ui_snapshot). Requires accessibility; no shell fallback. Pass observationId to reject stale screens.",
+        withDevice(
+            "\"text\":{\"type\":\"string\",\"maxLength\":4000,\"description\":\"Replacement text, up to 4000 characters.\"}," +
+                "\"elementId\":{\"type\":\"string\",\"description\":\"Editable element id from ui_snapshot. Omit to use the focused field.\"}," +
+                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Required when elementId is set.\"}",
+            "\"text\"",
+        ),
+        false, false, false, false, "write", "input.replace_text",
+    ),
+    ToolDef(
+        "clear_text",
+        "Clear the currently focused field or a specified editable element (elementId from ui_snapshot). Requires accessibility. Pass observationId to reject stale screens.",
+        withDevice(
+            "\"elementId\":{\"type\":\"string\",\"description\":\"Editable element id from ui_snapshot. Omit to use the focused field.\"}," +
+                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Required when elementId is set.\"}",
+        ),
+        false, false, false, false, "write", "input.clear_text",
+    ),
+    ToolDef(
+        "set_clipboard",
+        "Write text to the system clipboard. Use this to prepare long text, CJK, emoji, or special characters for paste.",
+        withDevice(
+            "\"text\":{\"type\":\"string\",\"maxLength\":20000,\"description\":\"Text to copy, up to 20000 characters.\"}",
+            "\"text\"",
+        ),
+        false, false, true, false, "write", "clipboard.set",
+    ),
+    ToolDef(
+        "get_clipboard",
+        "Read system clipboard text. Android 10+ restricts background reads and may return empty.",
+        withDevice(""),
+        true, false, true, false, "query", "clipboard.get",
+    ),
+    ToolDef(
+        "paste_text",
+        "Insert text via the system clipboard paste path: sets the clipboard, then performs paste on the focused editable field. Requires the accessibility service to confirm real input focus; the clipboard is never modified without focus.",
+        withDevice(
+            "\"text\":{\"type\":\"string\",\"maxLength\":20000,\"description\":\"Text to paste, up to 20000 characters.\"}",
+            "\"text\"",
+        ),
+        false, false, false, false, "write", "input.paste",
+    ),
+    ToolDef(
         "ui_dump",
         "Dump the current UI hierarchy as JSON (class, text, content description, bounds, children). Needs the accessibility service, or root as fallback.",
         withDevice(""),
