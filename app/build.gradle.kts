@@ -3,13 +3,27 @@ plugins {
     kotlin("android")
 }
 
-// Release signing: CI writes app/keystore.properties from GitHub Secrets
-// (KEYSTORE_BASE64 decoded to app/release.keystore). Local builds without the
-// properties file fall back to the debug key.
-val keystorePropsFile = rootProject.file("app/keystore.properties")
-val keystoreProps = java.util.Properties()
-if (keystorePropsFile.exists()) {
-    keystorePropsFile.inputStream().use { keystoreProps.load(it) }
+// Release signing: environment variables (CI, or `source signing.env` locally) or Gradle
+// properties (~/.gradle/gradle.properties). Never commit keystores or passwords.
+fun signingValue(env: String, property: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() }
+        ?: (findProperty(property) as String?)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("EMUSE_KEYSTORE_FILE", "emuse.keystoreFile")
+val releaseStorePassword = signingValue("EMUSE_KEYSTORE_PASSWORD", "emuse.keystorePassword")
+val releaseKeyAlias = signingValue("EMUSE_KEY_ALIAS", "emuse.keyAlias")
+val releaseKeyPassword = signingValue("EMUSE_KEY_PASSWORD", "emuse.keyPassword")
+// Only sign when every value is present and the keystore exists; otherwise release stays unsigned.
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() } && file(requireNotNull(releaseStoreFile)).isFile
+
+// APK file name: E-Muse-release.apk.
+base {
+    archivesName = "E-Muse"
 }
 
 android {
@@ -25,12 +39,12 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropsFile.exists()) {
+        if (hasReleaseSigning) {
             create("release") {
-                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
-                storePassword = keystoreProps.getProperty("storePassword")
-                keyAlias = keystoreProps.getProperty("keyAlias")
-                keyPassword = keystoreProps.getProperty("keyPassword")
+                storeFile = file(requireNotNull(releaseStoreFile))
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -38,7 +52,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            if (keystorePropsFile.exists()) {
+            if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
             proguardFiles(
