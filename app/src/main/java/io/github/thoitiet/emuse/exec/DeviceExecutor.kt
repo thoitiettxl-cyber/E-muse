@@ -325,7 +325,7 @@ class DeviceExecutor(private val appCtx: Context) {
             .put("items", items)
             .put(
                 "note",
-                "next system alarm only; full alarm/timer listing needs the clock app database (ColorOS, planned separately)",
+                "ColorOS clock database unavailable (no root or not ColorOS); showing next system alarm only",
             )
     }
 
