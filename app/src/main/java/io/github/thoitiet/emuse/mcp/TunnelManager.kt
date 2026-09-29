@@ -323,8 +323,6 @@ class TunnelManager(
         setState(State.Stopped)
     }
 
-    fun isRunning(): Boolean = wantRunning
-
     /** Đặt state Failed từ bên ngoài (vd local server bind lỗi -> không start tunnel). */
     fun failNow(reason: String) {
         wantRunning = false

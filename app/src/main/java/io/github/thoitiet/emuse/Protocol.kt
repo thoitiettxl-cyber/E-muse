@@ -85,16 +85,7 @@ object Cmds {
     const val APP_STATE_CONTROL = "app.state_control"
 }
 
-data class DeviceCommand(val id: String, val cmd: String, val args: JSONObject) {
-    companion object {
-        fun fromJson(o: JSONObject): DeviceCommand =
-            DeviceCommand(
-                o.getString("id"),
-                o.getString("cmd"),
-                o.optJSONObject("args") ?: JSONObject(),
-            )
-    }
-}
+data class DeviceCommand(val id: String, val cmd: String, val args: JSONObject)
 
 data class DeviceResult(
     val id: String,

@@ -12,7 +12,6 @@ import android.util.Base64
 import io.github.thoitiet.emuse.InstallReceiver
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 import java.text.Normalizer
 import java.util.Locale
 
@@ -226,6 +225,4 @@ class AppExecutor(private val ctx: Context) {
         if (!r.ok) throw IllegalStateException("force-stop failed: ${r.stderr.trim().take(200)}")
         return JSONObject().put("stopped", true)
     }
-
-    fun cacheApkPath(name: String): File = File(ctx.cacheDir, name)
 }

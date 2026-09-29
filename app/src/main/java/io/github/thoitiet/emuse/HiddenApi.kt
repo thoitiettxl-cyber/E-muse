@@ -40,13 +40,4 @@ object HiddenApi {
             Log.w(TAG, "predictive back exemption failed: ${it.message}")
         }
     }
-
-    /** Exempt extra hidden-API signatures when a future feature needs them. */
-    fun addExemptions(vararg signatures: String) {
-        runCatching {
-            HiddenApiBypass.addHiddenApiExemptions(*signatures)
-        }.onFailure {
-            Log.w(TAG, "addHiddenApiExemptions failed: ${it.message}")
-        }
-    }
 }
