@@ -177,11 +177,18 @@ class SensitiveReadExecutor(private val appCtx: Context) {
         val like = likeSelection(searchableColumns, keyword)
         val (selection, selectionArgs) = combineSelection(fixedSelection, like)
         val items = JSONArray()
+        // Exact truncation: read one row past the limit; its presence proves
+        // more data exists, instead of guessing from `items == limit`.
+        var truncated = false
         try {
             appCtx.contentResolver.query(
                 uri, projection, selection, selectionArgs, sortOrder,
             )?.use { cursor ->
-                while (cursor.moveToNext() && items.length() < limit) {
+                while (cursor.moveToNext()) {
+                    if (items.length() >= limit) {
+                        truncated = true
+                        break
+                    }
                     items.put(cursor.mapRow())
                 }
             } ?: return err("PROVIDER_UNAVAILABLE", "Content provider returned no cursor.", tool)
@@ -193,7 +200,7 @@ class SensitiveReadExecutor(private val appCtx: Context) {
         return ok(tool)
             .put("items", items)
             .put("count", items.length())
-            .put("truncated", items.length() >= limit)
+            .put("truncated", truncated)
     }
 
     private fun limitArg(a: org.json.JSONObject, default: Int, max: Int = 30): Int =

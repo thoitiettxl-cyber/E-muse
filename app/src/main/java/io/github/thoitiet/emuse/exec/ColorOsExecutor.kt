@@ -88,9 +88,17 @@ internal object DbSnapshot {
         SIDECARS.forEach { File(snapshot.absolutePath + it).delete() }
     }
 
+    /**
+     * Deletes stale snapshot files with the given prefix, but only those
+     * older than 10 minutes: several memory tools share the
+     * "emuse-coloros-memory-" prefix, and deleting every file could remove
+     * a snapshot another concurrent call is still opening (transient
+     * SNAPSHOT_OPEN_FAILED).
+     */
     private fun cleanupStale(appCtx: Context, prefix: String) {
+        val cutoff = System.currentTimeMillis() - 10 * 60 * 1_000L
         appCtx.cacheDir.listFiles()
-            ?.filter { it.isFile && it.name.startsWith(prefix) }
+            ?.filter { it.isFile && it.name.startsWith(prefix) && it.lastModified() < cutoff }
             ?.forEach(File::delete)
     }
 }
@@ -173,7 +181,10 @@ class ColorOsExecutor(private val appCtx: Context) {
     ): JSONObject {
         requireRoot(tool)?.let { return it }
         val limit = a.optInt("limit", 10).coerceIn(1, 30)
-        val keyword = a.optString("query").trim()
+        // Truncated like SensitiveReadExecutor.queryArg: the keyword is
+        // embedded in a shell `content query --where` argument, so an
+        // unbounded query could exceed ARG_MAX.
+        val keyword = a.optString("query").trim().take(100)
         val where = combineWhere(
             fixedWhere,
             keyword.takeIf { it.isNotBlank() }?.let { likeClause(searchableColumns, it) },
@@ -200,11 +211,14 @@ class ColorOsExecutor(private val appCtx: Context) {
                 )
                 continue
             }
-            val items = parseRows(r.stdout, projection).take(limit)
+            val all = parseRows(r.stdout, projection)
+            val items = all.take(limit)
             return ok(tool)
                 .put("items", JSONArray(items))
                 .put("count", items.size)
-                .put("truncated", r.truncated || items.size == limit)
+                // Exact: all provider rows are already parsed, so `all.size`
+                // proves whether more rows existed beyond the limit.
+                .put("truncated", r.truncated || all.size > limit)
         }
         return lastErr
             ?: err("PROVIDER_UNAVAILABLE", "ColorOS provider is not available.", tool)
@@ -390,7 +404,7 @@ class ColorOsExecutor(private val appCtx: Context) {
             )
         }
         val projection = CORE_COLUMNS.filter(memoryColumns::contains)
-        val keyword = a.optString("query").trim()
+        val keyword = a.optString("query").trim().take(100)
         val limit = a.optInt("limit", 10).coerceIn(1, 30)
         val selectionParts = mutableListOf<String>()
         val selectionArgs = mutableListOf<String>()
@@ -470,9 +484,15 @@ class ColorOsExecutor(private val appCtx: Context) {
             null,
             null,
             if ("created_time" in memoryColumns) "${"created_time".sqlId()} DESC" else null,
-            limit.toString(),
+            // One row past the limit: its presence proves more rows exist,
+            // so `truncated` is exact instead of a guess from `== limit`.
+            (limit + 1).toString(),
         ).use { cursor ->
             while (cursor.moveToNext()) {
+                if (items.length() >= limit) {
+                    resultTruncated = true
+                    break
+                }
                 val item = cursor.currentRow()
                 val memoryId = item.optString("memory_id")
                 if (memoryId.isNotBlank()) {
@@ -497,7 +517,7 @@ class ColorOsExecutor(private val appCtx: Context) {
         ok(toolName)
             .put("items", items)
             .put("count", items.length())
-            .put("truncated", resultTruncated || items.length() == limit)
+            .put("truncated", resultTruncated)
     }
 
     fun searchSavedPlaces(a: JSONObject): JSONObject = withSnapshotDb(
@@ -517,7 +537,7 @@ class ColorOsExecutor(private val appCtx: Context) {
             )
         }
         val projection = PLACE_COLUMNS.filter(columns::contains)
-        val keyword = a.optString("query").trim()
+        val keyword = a.optString("query").trim().take(100)
         val limit = a.optInt("limit", 10).coerceIn(1, 30)
         val searchable = PLACE_SEARCH_COLUMNS.filter(columns::contains)
         val selection = if (keyword.isNotBlank() && searchable.isNotEmpty()) {
@@ -533,6 +553,8 @@ class ColorOsExecutor(private val appCtx: Context) {
             null
         }
         val items = JSONArray()
+        // Exact truncation: one row past the limit proves more rows exist.
+        var truncated = false
         database.query(
             "memory_address",
             projection.map { it.sqlId() }.toTypedArray(),
@@ -541,14 +563,19 @@ class ColorOsExecutor(private val appCtx: Context) {
             null,
             null,
             if ("create_time" in columns) "${"create_time".sqlId()} DESC" else null,
-            limit.toString(),
+            (limit + 1).toString(),
         ).use { cursor ->
-            while (cursor.moveToNext()) items.put(cursor.currentRow())
+            var seen = 0
+            while (cursor.moveToNext()) {
+                seen++
+                if (seen <= limit) items.put(cursor.currentRow())
+            }
+            truncated = seen > limit
         }
         ok(toolName)
             .put("items", items)
             .put("count", items.length())
-            .put("truncated", items.length() == limit)
+            .put("truncated", truncated)
     }
 
     private fun relatedDetails(database: SQLiteDatabase, memoryId: String): JSONObject =
@@ -602,7 +629,7 @@ class ColorOsExecutor(private val appCtx: Context) {
             )
         }
         val limit = a.optInt("limit", 20).coerceIn(1, 50)
-        val items = queryClockTable(
+        val (items, truncated) = queryClockTable(
             database,
             table = "timer_schedule",
             columns = listOf(
@@ -616,7 +643,7 @@ class ColorOsExecutor(private val appCtx: Context) {
         ok(toolName)
             .put("items", items)
             .put("count", items.length())
-            .put("truncated", items.length() == limit)
+            .put("truncated", truncated)
     }
 
     /**
@@ -642,7 +669,7 @@ class ColorOsExecutor(private val appCtx: Context) {
                     return@use null
                 }
                 val n = limit.coerceIn(1, 50)
-                val items = queryClockTable(
+                val (items, truncated) = queryClockTable(
                     database,
                     table = "alarms",
                     columns = listOf(
@@ -657,7 +684,7 @@ class ColorOsExecutor(private val appCtx: Context) {
                 ok("list_alarms")
                     .put("items", items)
                     .put("count", items.length())
-                    .put("truncated", items.length() == n)
+                    .put("truncated", truncated)
                     .put("source", "coloros_clock_db")
             }
         } finally {
@@ -671,6 +698,10 @@ class ColorOsExecutor(private val appCtx: Context) {
         required: Set<String>,
     ): Boolean = database.tableColumns(table).containsAll(required)
 
+    /**
+     * Queries a clock table, returning the rows plus an exact `truncated`
+     * flag (one row past the limit is read to prove more rows exist).
+     */
     private fun queryClockTable(
         database: SQLiteDatabase,
         table: String,
@@ -678,23 +709,29 @@ class ColorOsExecutor(private val appCtx: Context) {
         selection: String?,
         order: String,
         limit: Int,
-    ): JSONArray {
+    ): Pair<JSONArray, Boolean> {
         val available = database.tableColumns(table)
         val projection = columns.filter(available::contains)
-        return JSONArray().also { rows ->
-            database.query(
-                table,
-                projection.map { it.sqlId() }.toTypedArray(),
-                selection,
-                null,
-                null,
-                null,
-                order,
-                limit.toString(),
-            ).use { cursor ->
-                while (cursor.moveToNext()) rows.put(cursor.currentRow())
+        val rows = JSONArray()
+        var truncated = false
+        database.query(
+            table,
+            projection.map { it.sqlId() }.toTypedArray(),
+            selection,
+            null,
+            null,
+            null,
+            order,
+            (limit + 1).toString(),
+        ).use { cursor ->
+            var seen = 0
+            while (cursor.moveToNext()) {
+                seen++
+                if (seen <= limit) rows.put(cursor.currentRow())
             }
+            truncated = seen > limit
         }
+        return rows to truncated
     }
 
     companion object {
