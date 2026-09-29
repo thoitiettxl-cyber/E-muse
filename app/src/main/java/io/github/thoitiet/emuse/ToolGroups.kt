@@ -66,8 +66,8 @@ val TOOL_GROUP_BY_NAME: Map<String, ToolGroup> = mapOf(
     "media_control" to ToolGroup.DEVICE_DIRECT,
     "set_alarm" to ToolGroup.DEVICE_DIRECT,
     "set_timer" to ToolGroup.DEVICE_DIRECT,
-    "list_alarms" to ToolGroup.DEVICE_DIRECT,
-    "list_active_timers" to ToolGroup.DEVICE_DIRECT,
+    "list_alarms" to ToolGroup.SENSITIVE_READ,
+    "list_active_timers" to ToolGroup.SENSITIVE_READ,
     "top_memory_apps" to ToolGroup.DEVICE_DIRECT,
     "top_storage_apps" to ToolGroup.DEVICE_DIRECT,
 
