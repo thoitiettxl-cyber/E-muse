@@ -76,7 +76,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.security.crypto)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.okhttp)
     implementation(libs.hidden.api.bypass)
 }
