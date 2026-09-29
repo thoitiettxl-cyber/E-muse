@@ -18,10 +18,12 @@ object ScreenExecutor {
                 ScreenCapture.capturePng(w, h, densityDpi.takeIf { it > 0 } ?: 420)
             }.getOrNull()
             if (png != null && png.isNotEmpty()) {
+                // capturePng downscales to 1080p max: report actual dimensions.
+                val (rw, rh) = ScreenCapture.pngSize(png) ?: (w to h)
                 return JSONObject()
                     .put("pngBase64", android.util.Base64.encodeToString(png, android.util.Base64.NO_WRAP))
-                    .put("width", w)
-                    .put("height", h)
+                    .put("width", rw)
+                    .put("height", rh)
                     .put("via", "mediaProjection")
             }
         }
@@ -34,12 +36,19 @@ object ScreenExecutor {
             )
             val b64 = r.stdout.filter { !it.isWhitespace() }
             if (r.exitCode == 0 && b64.isNotEmpty()) {
-                val (w, h) = DeviceScreen.size()
-                return JSONObject()
-                    .put("pngBase64", b64)
-                    .put("width", w)
-                    .put("height", h)
-                    .put("via", "root")
+                val bytes = runCatching {
+                    android.util.Base64.decode(b64, android.util.Base64.NO_WRAP)
+                }.getOrNull()
+                if (bytes != null) {
+                    // Same 1080p downscale as the MediaProjection path.
+                    val scaled = ScreenCapture.downscalePng(bytes)
+                    val (rw, rh) = ScreenCapture.pngSize(scaled) ?: DeviceScreen.size()
+                    return JSONObject()
+                        .put("pngBase64", android.util.Base64.encodeToString(scaled, android.util.Base64.NO_WRAP))
+                        .put("width", rw)
+                        .put("height", rh)
+                        .put("via", "root")
+                }
             }
         }
         throw IllegalStateException(
