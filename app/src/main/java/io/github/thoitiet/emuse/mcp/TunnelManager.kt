@@ -1,7 +1,6 @@
 package io.github.thoitiet.emuse.mcp
 
 import android.content.Context
-import android.os.Build
 import io.github.thoitiet.emuse.Prefs
 import java.io.File
 import java.net.HttpURLConnection
@@ -337,52 +336,78 @@ class TunnelManager(
      * second, uncontrolled tunnel after START_STICKY restart).
      * PID reuse guard: only kill when the PID still belongs to our binary;
      * when the owner can't be verified, leave it alone.
+     *
+     * Implemented over /proc (no java.lang.ProcessHandle — it is not in the
+     * Android SDK), so it works on every API level this app supports.
      */
     private fun killStaleTunnel() {
         val f = pidFile()
         if (!f.exists()) return
-        // ProcessHandle needs API 34 (minSdk=28): skip the stale reap on older
-        // devices instead of crashing with NoSuchMethodError (an Error, not
-        // caught by runCatching). The generation guard still prevents leaks.
-        if (Build.VERSION.SDK_INT < 34) {
-            runCatching { f.delete() }
-            return
-        }
         val pid = runCatching { f.readText().trim().toLong() }.getOrNull()
-        if (pid == null) {
+        if (pid == null || pid <= 0) {
             runCatching { f.delete() }
             return
         }
-        try {
-            val handle = ProcessHandle.of(pid).orElse(null)
-            if (handle == null || !handle.isAlive) {
-                f.delete()
-                return
-            }
-            val cmd = runCatching { handle.info().command().orElse("") }.getOrDefault("")
-            val binPath = binaryFile().absolutePath
-            // S3: su-fallback path — the pidfile PID is `su` itself, the real
-            // cloudflared is a descendant. Kill the matching descendants first,
-            // then the su wrapper.
-            val isSu = cmd == "/system/bin/su" || cmd.endsWith("/su")
-            if (cmd.isEmpty() || (cmd != binPath && !isSu)) {
-                // Không xác minh được chủ PID (hoặc PID đã tái sử dụng) -> không kill bừa.
-                f.delete()
-                return
-            }
-            val targets = mutableListOf<ProcessHandle>()
-            if (isSu) {
-                handle.descendants().forEach { d ->
-                    val dcmd = runCatching { d.info().command().orElse("") }.getOrDefault("")
-                    if (dcmd == binPath) targets += d
-                }
-            }
-            targets += handle
-            targets.forEach { runCatching { it.destroyForcibly() } }
-            f.delete()
-        } catch (_: Exception) {
-            runCatching { f.delete() }
+        val binPath = binaryFile().absolutePath
+        val firstArg = readProcFirstArg(pid)
+        if (firstArg == null) {
+            f.delete() // already dead
+            return
         }
+        // S3: su-fallback path — the pidfile PID is `su` itself, the real
+        // cloudflared is a descendant. Kill the matching descendants first,
+        // then the su wrapper.
+        val isSu = firstArg == "su" || firstArg == "/system/bin/su" || firstArg.endsWith("/su")
+        if (firstArg != binPath && !isSu) {
+            // Không xác minh được chủ PID (hoặc PID đã tái sử dụng) -> không kill bừa.
+            f.delete()
+            return
+        }
+        val targets = mutableListOf<Long>()
+        if (isSu) targets += findProcDescendants(pid, binPath)
+        targets += pid
+        if (isSu) {
+            // Stale tunnel runs as root: kill through su. PIDs come from /proc
+            // (digits only), never from user input.
+            runCatching {
+                ProcessBuilder("su", "-c", "kill -9 " + targets.joinToString(" ")).start().waitFor()
+            }
+        } else {
+            targets.forEach { t -> runCatching { android.os.Process.killProcess(t.toInt()) } }
+        }
+        f.delete()
+    }
+
+    /** First argv element of /proc/<pid>/cmdline, or null when the process is gone. */
+    private fun readProcFirstArg(pid: Long): String? = runCatching {
+        val raw = File("/proc/$pid/cmdline").readBytes().toString(Charsets.UTF_8)
+        raw.substringBefore('\u0000').ifEmpty { null }
+    }.getOrNull()
+
+    /** PPID of a process from /proc/<pid>/stat, or null when unreadable. */
+    private fun readProcPpid(pid: Long): Long? = runCatching {
+        val stat = File("/proc/$pid/stat").readText()
+        stat.substringAfter(") ").trim().split(' ')[1].toLong()
+    }.getOrNull()
+
+    /** All descendant PIDs of [root] whose first argv element equals [binPath]. */
+    private fun findProcDescendants(root: Long, binPath: String): List<Long> {
+        val children = mutableMapOf<Long, MutableList<Long>>()
+        File("/proc").listFiles { d -> d.isDirectory && d.name.all { it.isDigit() } }
+            ?.forEach { d ->
+                val p = d.name.toLong()
+                readProcPpid(p)?.let { ppid -> children.getOrPut(ppid) { mutableListOf() } += p }
+            }
+        val out = mutableListOf<Long>()
+        val stack = ArrayDeque<Long>().also { it.add(root) }
+        while (stack.isNotEmpty()) {
+            val cur = stack.removeFirst()
+            children[cur]?.forEach { c ->
+                if (readProcFirstArg(c) == binPath) out += c
+                stack.add(c)
+            }
+        }
+        return out
     }
 
     private fun writePid(p: Process) {
@@ -494,7 +519,7 @@ class TunnelManager(
             val tokenSetup = if (named) {
                 val tf = writeTokenFile()
                 "TUNNEL_TOKEN=$(cat '${tf.absolutePath}'); " +
-                    "CLOUDFLARE_TUNNEL_TOKEN=$TUNNEL_TOKEN; " +
+                    "CLOUDFLARE_TUNNEL_TOKEN=\$TUNNEL_TOKEN; " +
                     "export TUNNEL_TOKEN CLOUDFLARE_TUNNEL_TOKEN; "
             } else ""
             ProcessBuilder("su", "-c", envPrefix + tokenSetup + args.joinToString(" ") { "'$it'" }).start()
@@ -518,7 +543,7 @@ class TunnelManager(
      * Named tunnels print no URL — they log "Registered tunnel connection"
      * instead, so map that to the fixed hostname.
      */
-    private suspend fun waitForUrl(p: Process, gen: Int): String? {
+    private suspend fun CoroutineScope.waitForUrl(p: Process, gen: Int): String? {
         val deadline = System.currentTimeMillis() + URL_TIMEOUT_MS
         val fixedUrl =
             "https://$tunnelHostname".takeIf { tunnelToken.isNotBlank() && tunnelHostname.isNotBlank() }
