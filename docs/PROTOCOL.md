@@ -10,7 +10,10 @@ Cloudflare Tunnel. Mọi request `/mcp` phải có header
 |---|---|---|
 | `GET` | `/health` | `{"ok":true,"mode":"direct"}` |
 | `POST` | `/mcp` | JSON-RPC 2.0 (MCP): `initialize`, `tools/list`, `tools/call`, `ping` |
-| `*` | `/device/connect` | legacy, giữ tương thích |
+| `*` | path khác | `404 Not Found` |
+
+(`GET /device/connect` là endpoint legacy đã xóa — server hiện tại chỉ serve
+2 path trên.)
 
 ## `tools/call` → executor
 

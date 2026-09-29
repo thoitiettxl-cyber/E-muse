@@ -20,7 +20,7 @@ server trung gian:
 
 - Package `io.github.thoitiet.emuse`. `MuseService` (foreground service) chạy:
   - `LocalHttpServer` — HTTP server trên `127.0.0.1:<mcpPort>` (mặc định 18789),
-    serve `/health`, `/mcp` (JSON-RPC 2.0), `/device/connect` (legacy).
+    serve `/health`, `/mcp` (JSON-RPC 2.0). Mọi path khác trả 404.
   - `TunnelManager` — tải `cloudflared` (ARM64, kèm Mozilla CA bundle vì binary
     Go trên Android không đọc được system CA store → export `SSL_CERT_FILE`),
     chạy Quick Tunnel (`quick --url`) hoặc Named Tunnel

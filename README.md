@@ -73,7 +73,7 @@ Trỏ MCP client tới URL tunnel (Quick hoặc named):
 ```json
 {
   "mcpServers": {
-    "E-muse": {
+    "E-muse-direct": {
       "url": "https://<tunnel-url-của-bạn>/mcp",
       "protocolVersion": "2026-07-28",
       "headers": { "EMUSE_API_KEY": "${EMUSE_API_KEY}" }
@@ -90,7 +90,7 @@ curl -s https://<tunnel-url-của-bạn>/health
 # {"ok":true,"mode":"direct"}
 ```
 
-## Danh sách tools (21)
+## Danh sách tools (23)
 
 | Tool | Loại | Mô tả |
 |---|---|---|
@@ -108,12 +108,14 @@ curl -s https://<tunnel-url-của-bạn>/health
 | `file_push` | write | Ghi file base64 lên máy |
 | `file_delete` | write | Xóa file/thư mục |
 | `screen_capture` | query | Screenshot PNG (trả image block) |
-| `input_tap` | write | Chạm (x, y) hoặc theo `elementId` từ `ui_snapshot` |
+| `input_tap` | write | Chạm (x, y) hoặc theo `elementId` từ `ui_snapshot` (+ `observationId` chống tap nhầm) |
+| `tap_and_observe` | write | **Tap + snapshot mới trong 1 call** — thay pattern 3-turn |
 | `input_swipe` | write | Vuốt (x1,y1 → x2,y2) |
 | `input_key` | write | Gửi key code |
 | `input_text` | write | Gõ text vào ô đang focus |
 | `ui_dump` | query | Cây UI hiện tại (JSON) |
 | `ui_snapshot` | query | Danh sách element gọn nhẹ (id `e0…`, text, bounds) cho automation |
+| `wait_for_text` | query | **Đợi text xuất hiện** (device poll, 1 call) |
 | `tool_flags` | query | Bật/tắt từng tool (không bao giờ bị tắt) |
 
 Mọi tool (trừ `device_list`) nhận `deviceId` tùy chọn — bỏ trống khi chỉ có

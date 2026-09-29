@@ -8,9 +8,9 @@ import java.util.UUID
 import org.json.JSONObject
 
 /**
- * On-device MCP endpoint (JSON-RPC 2.0 over Streamable HTTP).
- * Mirrors workers/mcp/server.ts so MCP clients work unchanged against
- * either the Worker relay or the direct tunnel URL.
+ * On-device MCP endpoint (JSON-RPC 2.0 over Streamable HTTP), served behind
+ * the Cloudflare Tunnel. This is the only MCP surface: the old Cloudflare
+ * Worker relay was removed.
  */
 class McpHandler(
     private val dispatcher: CommandDispatcher,
