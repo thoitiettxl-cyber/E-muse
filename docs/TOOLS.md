@@ -57,12 +57,12 @@ bắt buộc khi có nhiều máy cùng kết nối.
 | `search_call_history` | query | - | Tìm lịch sử cuộc gọi theo số/tên (date, duration, type). Cần READ_CALL_LOG |
 | `search_messages` | query | - | Tìm SMS theo người gửi/nội dung (body cắt 1000 ký tự). Cần READ_SMS |
 | `search_calendar_events` | query | - | Tìm sự kiện lịch theo tiêu đề/mô tả/địa điểm. Cần READ_CALENDAR |
-| `search_media` | query | - | Tìm ảnh/video trong MediaStore theo tên file/path. Cần READ_MEDIA_IMAGES/READ_MEDIA_VIDEO (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
+| `search_media` | query | - | Tìm ảnh/video trong MediaStore theo tên file/path. Cần ít nhất một trong READ_MEDIA_IMAGES/READ_MEDIA_VIDEO (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32); loại media nào thấy được phụ thuộc quyền đã cấp |
 | `search_audio` | query | - | Tìm audio theo tiêu đề/nghệ sĩ/path (album, duration). Cần READ_MEDIA_AUDIO (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
 | `search_recordings` | query | - | Tìm bản ghi âm/ghi cuộc gọi (lọc path `*Record*`). Cần READ_MEDIA_AUDIO (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
 | `search_files` | query | - | Tìm tài liệu/file chung trong MediaStore. Cần một quyền READ_MEDIA_* (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
 | `search_downloads` | query | - | Tìm file trong Downloads (API 29+). Cần một quyền READ_MEDIA_* (API 33+) hoặc READ_EXTERNAL_STORAGE (≤ API 32) |
-| `get_current_location` | query | - | Vị trí last-known (lat/lon làm tròn ~10m, accuracy_m, age_s). Cần ACCESS_FINE_LOCATION (hoặc COARSE) |
+| `get_current_location` | query | - | Vị trí last-known (lat/lon làm tròn 5 chữ số thập phân, accuracy_m, age_s). Cần ACCESS_FINE_LOCATION (hoặc COARSE) |
 | `recent_app_activity` | query | - | App mới foreground gần đây (package, app name, activity, resumed_at). Cần Usage access (Settings → Special app access → Usage access) |
 | `app_usage_summary` | query | - | Tổng hợp foreground_ms/last_used_at theo app, giảm dần. Cần Usage access |
 | `recent_notifications` | query | - | Notification đang active (package, title, text) qua root `cmd notification`. Không cần manifest permission |

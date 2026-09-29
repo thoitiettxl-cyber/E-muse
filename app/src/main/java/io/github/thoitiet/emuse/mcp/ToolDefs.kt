@@ -173,7 +173,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "search_media",
-        "Search photos and videos in MediaStore by file name or path (mime type, date, size). Needs READ_MEDIA_IMAGES/READ_MEDIA_VIDEO (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
+        "Search photos and videos in MediaStore by file name or path (mime type, date, size). Needs at least one of READ_MEDIA_IMAGES/READ_MEDIA_VIDEO (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below); the granted kinds decide which media types are visible.",
         withDevice(
             "\"query\":{ \"type\":\"string\",\"description\":\"File name or path fragment. Omit to list all.\"}," +
                 "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
@@ -218,7 +218,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "get_current_location",
-        "Get the current/last-known device location (latitude, longitude rounded to ~10m, accuracy_m, age_s). Needs ACCESS_FINE_LOCATION (or ACCESS_COARSE_LOCATION).",
+        "Get the current/last-known device location (latitude, longitude rounded to 5 decimals, accuracy_m, age_s). Needs ACCESS_FINE_LOCATION (or ACCESS_COARSE_LOCATION).",
         withDevice(""),
         true, false, true, false, "query", "location.get",
     ),
@@ -269,7 +269,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "get_logcat",
-        "Read device logs (logcat -d -v threadtime) via root, newest lines first. Needs root; no manifest permission required.",
+        "Read device logs (logcat -d -v threadtime) via root, chronological order (oldest first). Needs root; no manifest permission required.",
         withDevice(
             "\"max_lines\":{ \"type\":\"number\",\"description\":\"Max log lines, 20 to 500. Default 200.\"}," +
                 "\"query\":{ \"type\":\"string\",\"description\":\"Case-insensitive filter. Omit for all.\"}",

@@ -889,7 +889,7 @@ class SensitiveReadExecutor(private val appCtx: Context) {
             Regex("<Network>.*?</Network>", setOf(RegexOption.DOT_MATCHES_ALL))
         private val XML_SSID = Regex("<string name=\"SSID\">(.*?)</string>")
         private val XML_PSK = Regex("<string name=\"PreSharedKey\">(.*?)</string>")
-        private val NOTIFICATION_PACKAGE = Regex(""""NotificationRecord\([^:]+:\s+pkg=([^\s]+)"""")
+        private val NOTIFICATION_PACKAGE = Regex("""NotificationRecord\([^:]+:\s+pkg=([^\s]+)""")
         private val OTP = Regex("""(?<!\d)(\d{4,8})(?!\d)""")
         private val OTP_CONTEXT = Regex(
             """验证码|校验码|动态码|确认码|一次性密码|verification\s*code|one[- ]time\s*(?:code|password)|\botp\b""",
