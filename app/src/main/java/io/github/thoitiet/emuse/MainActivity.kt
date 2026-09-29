@@ -31,8 +31,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import io.github.thoitiet.emuse.exec.ScreenCapture
 import io.github.thoitiet.emuse.exec.ShellExecutor
+import java.util.concurrent.Executors
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Miuix/HyperOS-style settings screen: section titles + grouped cards with
@@ -64,14 +68,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tunnelHostInput: EditText
     private lateinit var accSummary: TextView
     private lateinit var shotSummary: TextView
+    private lateinit var installSummary: TextView
     private val groupSwitches = mutableMapOf<ToolGroup, Switch>()
     private val permRows = mutableListOf<PermRow>()
     private lateinit var usageSummary: TextView
 
+    /** Background executor for all refresh() work (single thread, no churn). */
+    private val bg = Executors.newSingleThreadExecutor()
+    /** hasRoot() result cached once at startup; refresh() never blocks on it. */
+    @Volatile
+    private var rootCached: Boolean? = null
+
     private var updatingUi = false
 
     companion object {
+        private const val REQ_POST_NOTIFICATIONS = 1
         private const val REQ_RUNTIME_PERMS = 2
+        private const val KEY_PERM_CHECKS = "perm_checks"
     }
 
     private val projectionLauncher = registerForActivityResult(
@@ -142,7 +155,7 @@ class MainActivity : AppCompatActivity() {
                 )
             }
             refresh()
-        }
+        }.first
         svcCard.addView(divider())
         overlaySwitch = switchRow(
             svcCard, "Bóng nổi",
@@ -162,7 +175,7 @@ class MainActivity : AppCompatActivity() {
             prefs.overlayEnabled = checked
             if (checked) FloatingOverlay.show(this) else FloatingOverlay.hide()
             refresh()
-        }
+        }.first
         root.addView(svcCard)
 
         // ---- section: Truy cập ----
@@ -181,7 +194,7 @@ class MainActivity : AppCompatActivity() {
                 prefs.setGroupEnabled(g, checked)
                 toast(if (checked) "Đã bật: ${g.title}" else "Đã tắt: ${g.title}")
                 refresh()
-            }
+            }.first
             groupSwitches[g] = sw
             if (g != ToolGroup.entries.last()) permCard.addView(divider())
         }
@@ -227,10 +240,29 @@ class MainActivity : AppCompatActivity() {
             permRows += checkRow(runPermCard, item.title, item)
             runPermCard.addView(divider())
         }
-        actionRow(runPermCard, "Truy cập dùng app", "", "Mở cài đặt") {
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        // Rotation: restore the checkbox ticks (EditTexts survive via Prefs).
+        savedInstanceState?.getBooleanArray(KEY_PERM_CHECKS)?.let { saved ->
+            permRows.forEachIndexed { i, r ->
+                if (i < saved.size) setCheck(r.box, saved[i])
+            }
         }
-        usageSummary = summaryOf(runPermCard)
+        usageSummary = actionRow(runPermCard, "Truy cập dùng app", "", "Mở cài đặt") {
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        }.second
+        runPermCard.addView(divider())
+        installSummary = actionRow(
+            runPermCard,
+            "Cài đặt APK",
+            "app_install cần quyền này (Install unknown apps)",
+            "Mở cài đặt",
+        ) {
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    android.net.Uri.parse("package:$packageName"),
+                ),
+            )
+        }.second
         root.addView(runPermCard)
         val grantBtn = Button(this).apply {
             text = "Cấp quyền đã chọn"
@@ -252,7 +284,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(sectionTitle("Cloudflare Tunnel"))
         val tunCard = card()
         tunnelSummary = TextView(this) // placeholder, replaced below
-        tunnelSwitch = switchRow(tunCard, "Tunnel", "") { checked ->
+        val tunPair = switchRow(tunCard, "Tunnel", "") { checked ->
             persistInputs()
             prefs.tunnelEnabled = checked
             ContextCompat.startForegroundService(
@@ -264,13 +296,15 @@ class MainActivity : AppCompatActivity() {
             toast(if (checked) "Đang bật tunnel…" else "Đã tắt tunnel")
             refresh()
             // URL đến bất đồng bộ; refresh lại vài lần.
-            tunnelSummary.postDelayed({ refresh() }, 5000)
-            tunnelSummary.postDelayed({ refresh() }, 15000)
-            tunnelSummary.postDelayed({ refresh() }, 30000)
+            // lifecycleScope: cancelled on destroy, never touches the old activity.
+            lifecycleScope.launch {
+                delay(5000); refresh()
+                delay(10000); refresh()
+                delay(15000); refresh()
+            }
         }
-        // grab the summary view of the switch row we just added
-        tunnelSummary = ((tunCard.getChildAt(tunCard.childCount - 1) as LinearLayout)
-            .getChildAt(0) as LinearLayout).getChildAt(1) as TextView
+        tunnelSwitch = tunPair.first
+        tunnelSummary = tunPair.second
         tunCard.addView(divider())
         tunnelUrlRow = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -303,18 +337,14 @@ class MainActivity : AppCompatActivity() {
         // ---- section: Thiết bị ----
         root.addView(sectionTitle("Thiết bị"))
         val devCard = card()
-        accSummary = TextView(this) // placeholder
-        actionRow(devCard, "Accessibility", "", "Mở cài đặt") {
+        accSummary = actionRow(devCard, "Accessibility", "", "Mở cài đặt") {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
-        accSummary = summaryOf(devCard)
+        }.second
         devCard.addView(divider())
-        shotSummary = TextView(this) // placeholder
-        actionRow(devCard, "Chụp màn hình", "", "Cấp quyền") {
+        shotSummary = actionRow(devCard, "Chụp màn hình", "", "Cấp quyền") {
             val mgr = getSystemService(MediaProjectionManager::class.java)
             projectionLauncher.launch(mgr.createScreenCaptureIntent())
-        }
-        shotSummary = summaryOf(devCard)
+        }.second
         root.addView(devCard)
 
         setContentView(ScrollView(this).apply {
@@ -328,8 +358,15 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                1,
+                REQ_POST_NOTIFICATIONS,
             )
+        }
+        // hasRoot() takes seconds: compute once in the background; refresh()
+        // reuses the cached value so toggles never show fake-ON state.
+        bg.execute {
+            val r = ShellExecutor.hasRoot()
+            rootCached = r
+            runOnUiThread { if (!isFinishing && !isDestroyed) refresh() }
         }
         refresh()
     }
@@ -342,6 +379,16 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         persistInputs()
         super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBooleanArray(KEY_PERM_CHECKS, permRows.map { it.box.isChecked }.toBooleanArray())
+    }
+
+    override fun onDestroy() {
+        bg.shutdownNow()
+        super.onDestroy()
     }
 
     private fun persistInputs() {
@@ -388,13 +435,13 @@ class MainActivity : AppCompatActivity() {
         setBackgroundColor(divider)
     }
 
-    /** Returns the Switch; the summary TextView can be found via [summaryOf]. */
+    /** Returns Pair(Switch, summary TextView) — no index-based lookup needed. */
     private fun switchRow(
         parent: LinearLayout,
         title: String,
         summary: String,
         onChange: (Boolean) -> Unit,
-    ): Switch {
+    ): Pair<Switch, TextView> {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -409,11 +456,12 @@ class MainActivity : AppCompatActivity() {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             setTextColor(fgColor)
         })
-        texts.addView(TextView(this).apply {
+        val summaryView = TextView(this).apply {
             text = summary
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             setTextColor(secondary)
-        })
+        }
+        texts.addView(summaryView)
         val sw = Switch(this)
         sw.setOnCheckedChangeListener { _, checked ->
             if (!updatingUi) onChange(checked)
@@ -421,7 +469,7 @@ class MainActivity : AppCompatActivity() {
         row.addView(texts)
         row.addView(sw)
         parent.addView(row)
-        return sw
+        return sw to summaryView
     }
 
     /** Row for the "chọn rồi cấp" runtime-permission picker: checkbox + title + status. */
@@ -452,18 +500,14 @@ class MainActivity : AppCompatActivity() {
         return PermRow(box, status, item)
     }
 
-    private fun summaryOf(card: LinearLayout): TextView {
-        val row = card.getChildAt(card.childCount - 1) as LinearLayout
-        return (row.getChildAt(0) as LinearLayout).getChildAt(1) as TextView
-    }
-
+    /** Returns Pair(Button, summary TextView). */
     private fun actionRow(
         parent: LinearLayout,
         title: String,
         summary: String,
         buttonText: String,
         onClick: () -> Unit,
-    ) {
+    ): Pair<Button, TextView> {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -478,17 +522,20 @@ class MainActivity : AppCompatActivity() {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             setTextColor(fgColor)
         })
-        texts.addView(TextView(this).apply {
+        val summaryView = TextView(this).apply {
             text = summary
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             setTextColor(secondary)
-        })
+        }
+        texts.addView(summaryView)
         row.addView(texts)
-        row.addView(Button(this).apply {
+        val btn = Button(this).apply {
             text = buttonText
             setOnClickListener { onClick() }
-        })
+        }
+        row.addView(btn)
         parent.addView(row)
+        return btn to summaryView
     }
 
     private fun infoRow(parent: LinearLayout, title: String, value: String) {
@@ -572,12 +619,34 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_POST_NOTIFICATIONS) {
+            refresh()
+            return
+        }
         if (requestCode == REQ_RUNTIME_PERMS) {
-            val granted = grantResults.count { it == PackageManager.PERMISSION_GRANTED }
-            toast("Đã cấp $granted/${permissions.size} quyền")
+            val denied = permissions.indices
+                .filter { grantResults[it] != PackageManager.PERMISSION_GRANTED }
+                .map { permissions[it] }
+            val granted = permissions.size - denied.size
+            // "Don't ask again": the next tap would deny silently with no
+            // dialog — tell the user to grant manually in Settings instead.
+            val neverAsk = denied.filter {
+                !ActivityCompat.shouldShowRequestPermissionRationale(this, it)
+            }
+            val msg = buildString {
+                append("Đã cấp $granted/${permissions.size} quyền")
+                if (neverAsk.isNotEmpty()) {
+                    append(". ${neverAsk.size} quyền bị từ chối vĩnh viễn " +
+                        "(Don't ask again): mở Cài đặt > Ứng dụng > E-Muse > " +
+                        "Quyền để cấp thủ công")
+                }
+            }
+            toast(msg)
             refresh()
         }
     }
+
+    private fun canRequestInstall(): Boolean = packageManager.canRequestPackageInstalls()
 
     private fun setCheck(box: CheckBox, checked: Boolean) {
         updatingUi = true
@@ -592,9 +661,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        // Root check blocks for seconds: never run it on the UI thread.
-        Thread {
-            val root = ShellExecutor.hasRoot()
+        // All work runs on the shared single-thread executor (no thread churn);
+        // hasRoot() is cached from onCreate so refresh() never blocks toggles.
+        bg.execute {
+            val root = rootCached ?: false
             val prefs = Prefs(this@MainActivity)
             val acc = MuseAccessibilityService.instance != null || accessibilityOn()
             val shot = when {
@@ -618,7 +688,7 @@ class MainActivity : AppCompatActivity() {
                 tunnelSummary.text = when {
                     prefs.tunnelUrl.isNotEmpty() -> prefs.tunnelUrl
                     prefs.tunnelEnabled -> "Đang tạo tunnel…"
-                    else -> "Đang tắt"
+                    else -> "Đã tắt"
                 }
                 tunnelUrlView.text = if (prefs.tunnelUrl.isNotEmpty())
                     "URL: ${prefs.tunnelUrl}\n(bấm để copy)" else ""
@@ -627,6 +697,7 @@ class MainActivity : AppCompatActivity() {
 
                 accSummary.text = if (acc) "Đã bật" else "Chưa bật"
                 shotSummary.text = shot
+                installSummary.text = if (canRequestInstall()) "Đã cấp" else "Chưa cấp"
 
                 // Android runtime permissions (chọn rồi cấp)
                 for (r in permRows) {
@@ -636,7 +707,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 usageSummary.text = if (usageAccessGranted()) "Đã cấp" else "Chưa cấp"
             }
-        }.start()
+        }
     }
 
     private fun accessibilityOn(): Boolean {
