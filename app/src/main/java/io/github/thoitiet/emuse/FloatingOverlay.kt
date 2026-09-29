@@ -62,6 +62,7 @@ object FloatingOverlay {
             runCatching { bubble?.let { wm?.removeView(it) } }
             runCatching { panel?.let { wm?.removeView(it) } }
             bubble = null
+            orb = null
             panel = null
             wm = null
             expanded = false
@@ -108,26 +109,65 @@ object FloatingOverlay {
             connected -> 0xFF4CAF50.toInt()
             else -> 0xFF9E9E9E.toInt()
         }
-        val b = bubble ?: return
-        (b.background as? GradientDrawable)?.setStroke(2.dp(b.context), ringColor)
+        orb?.accent = ringColor
     }
 
     // ---- views ----
 
-    private fun buildBubble(ctx: Context): FrameLayout {
-        val label = TextView(ctx).apply {
-            text = "E"
-            setTextColor(0xFFFFFFFF.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            gravity = Gravity.CENTER
+    /** Eta-style orb: 56dp touch area, ~32dp glowing ball, halo fading out. */
+    private class OrbView(ctx: Context) : View(ctx) {
+        var accent: Int = 0xFF9E9E9E.toInt()
+            set(v) { field = v; invalidate() }
+
+        private fun darker(c: Int): Int {
+            val f = 0.72f
+            return android.graphics.Color.rgb(
+                (android.graphics.Color.red(c) * f).toInt(),
+                (android.graphics.Color.green(c) * f).toInt(),
+                (android.graphics.Color.blue(c) * f).toInt(),
+            )
         }
-        return FrameLayout(ctx).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(0xCC212121.toInt())
-                setStroke(2.dp(ctx), ringColor)
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            super.onDraw(canvas)
+            val w = width.toFloat().coerceAtLeast(1f)
+            val cx = w / 2f
+            val cy = w / 2f
+            // halo
+            val halo = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                shader = android.graphics.RadialGradient(
+                    cx, cy, w / 2f,
+                    intArrayOf(
+                        android.graphics.Color.argb(110, android.graphics.Color.red(accent),
+                            android.graphics.Color.green(accent), android.graphics.Color.blue(accent)),
+                        android.graphics.Color.TRANSPARENT,
+                    ),
+                    floatArrayOf(0.35f, 1f),
+                    android.graphics.Shader.TileMode.CLAMP,
+                )
             }
-            addView(label, FrameLayout.LayoutParams(
+            canvas.drawCircle(cx, cy, w / 2f, halo)
+            // ball
+            val r = w * 0.3f
+            val ball = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                shader = android.graphics.RadialGradient(
+                    cx - r * 0.3f, cy - r * 0.3f, r,
+                    intArrayOf(accent, darker(accent)),
+                    floatArrayOf(0f, 1f),
+                    android.graphics.Shader.TileMode.CLAMP,
+                )
+            }
+            canvas.drawCircle(cx, cy, r, ball)
+        }
+    }
+
+    private var orb: OrbView? = null
+
+    private fun buildBubble(ctx: Context): FrameLayout {
+        val o = OrbView(ctx).apply { accent = ringColor }
+        orb = o
+        return FrameLayout(ctx).apply {
+            addView(o, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             setOnTouchListener(DragTouchListener(ctx, { wm }, { bubble }, { bubbleParams }))
             setOnClickListener { togglePanel() }
