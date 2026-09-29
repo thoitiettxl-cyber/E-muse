@@ -71,4 +71,15 @@ gradle :app:assembleDebug
 1. Thêm `Cmd` vào `Cmds` trong `app/.../Protocol.kt`.
 2. Thêm `ToolDef` vào `app/.../mcp/ToolDefs.kt` (kind `query`/`write` đúng).
 3. Implement executor trong `app/.../exec/` + case trong `CommandDispatcher.execute()`.
-4. Cập nhật `docs/TOOLS.md` và bảng tool trong `README.md`.
+4. Gán nhóm trong `app/.../ToolGroups.kt` (cả `TOOL_GROUP_BY_NAME` và
+   `TOOL_NAME_BY_CMD`) — tool thiếu group bị fail-closed.
+5. Thêm `shortArgs` trong `CommandDispatcher` cho log bong bóng overlay.
+6. Liệt kê **trước** mọi permission Android tool cần (normal/dangerous/
+   special/root-only) và khai báo hết trong `AndroidManifest.xml` ngay —
+   không để CI/live test mới phát hiện (bài học P4, lặp 2 lần).
+7. **Trước mỗi commit: chạy `scripts/verify-phase.sh`.** Script này kiểm tra:
+   brace/paren cân bằng, mọi executor class được reference đều có import
+   (bài học P5: thiếu `import SensitiveReadExecutor`), wiring khớp
+   Protocol↔ToolDefs↔ToolGroups↔CommandDispatcher, và mọi
+   `Manifest.permission.*` trong code đều đã khai báo trong manifest.
+8. Cập nhật `docs/TOOLS.md` và bảng tool trong `README.md`.
