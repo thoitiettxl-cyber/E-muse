@@ -1,6 +1,7 @@
 package io.github.thoitiet.emuse.exec
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.media.ImageReader
@@ -9,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
 
 /**
  * MediaProjection screenshot pipeline (no root needed).
@@ -20,6 +22,9 @@ import java.io.ByteArrayOutputStream
  */
 object ScreenCapture {
     private const val TAG = "E-Muse"
+
+    /** Screenshots are downscaled to this max dimension before compress. */
+    private const val MAX_DIM = 1080
 
     @Volatile
     private var projection: MediaProjection? = null
@@ -120,12 +125,64 @@ object ScreenCapture {
         bitmap.copyPixelsFromBuffer(buffer)
         val cropped = Bitmap.createBitmap(bitmap, 0, 0, width, height)
         if (cropped !== bitmap) bitmap.recycle()
+        // Full-resolution frames are wasteful over the tunnel: downscale to
+        // 1080p max (aspect preserved) before compressing.
+        val scaled = downscaleIfNeeded(cropped)
+        if (scaled !== cropped) cropped.recycle()
         val out = ByteArrayOutputStream()
         try {
-            cropped.compress(Bitmap.CompressFormat.PNG, 100, out)
+            scaled.compress(Bitmap.CompressFormat.PNG, 100, out)
         } finally {
-            cropped.recycle()
+            scaled.recycle()
         }
         return out.toByteArray()
+    }
+
+    /**
+     * Downscales [src] so its longest side is at most [maxDim] px, keeping
+     * the aspect ratio. Returns [src] itself when already small enough.
+     */
+    private fun downscaleIfNeeded(src: Bitmap, maxDim: Int = MAX_DIM): Bitmap {
+        val longest = maxOf(src.width, src.height)
+        if (longest <= maxDim) return src
+        val scale = maxDim.toFloat() / longest
+        val dw = maxOf(1, (src.width * scale).roundToInt())
+        val dh = maxOf(1, (src.height * scale).roundToInt())
+        return Bitmap.createScaledBitmap(src, dw, dh, true)
+    }
+
+    /**
+     * Same 1080p downscale as [capturePng] for paths that produce PNG bytes
+     * without a Bitmap (root screencap fallback). Returns the original bytes
+     * when already small enough or undecodable.
+     */
+    fun downscalePng(png: ByteArray, maxDim: Int = MAX_DIM): ByteArray {
+        val bitmap = runCatching {
+            BitmapFactory.decodeByteArray(png, 0, png.size)
+        }.getOrNull() ?: return png
+        try {
+            val scaled = downscaleIfNeeded(bitmap, maxDim)
+            if (scaled === bitmap) return png
+            try {
+                val out = ByteArrayOutputStream()
+                scaled.compress(Bitmap.CompressFormat.PNG, 100, out)
+                return out.toByteArray()
+            } finally {
+                scaled.recycle()
+            }
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    /** Decodes just the dimensions of PNG [png] without loading pixels. */
+    fun pngSize(png: ByteArray): Pair<Int, Int>? {
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(png, 0, png.size, opts)
+        return if (opts.outWidth > 0 && opts.outHeight > 0) {
+            opts.outWidth to opts.outHeight
+        } else {
+            null
+        }
     }
 }
