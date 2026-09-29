@@ -122,6 +122,10 @@ val TOOL_GROUP_BY_NAME: Map<String, ToolGroup> = mapOf(
     "clear_text" to ToolGroup.SENSITIVE_ACTION,
     "paste_text" to ToolGroup.SENSITIVE_ACTION,
     "open_system_panel" to ToolGroup.SENSITIVE_ACTION,
+    // P6: Eta-parity sensitive-action tools
+    "set_setting" to ToolGroup.SENSITIVE_ACTION,
+    "set_device_state" to ToolGroup.SENSITIVE_ACTION,
+    "app_state_control" to ToolGroup.SENSITIVE_ACTION,
 )
 
 /** Cmd -> tool name, for the CommandDispatcher enforcement layer. */
@@ -193,6 +197,11 @@ val TOOL_NAME_BY_CMD: Map<String, String> = mapOf(
     Cmds.LOGCAT_GET to "get_logcat",
     Cmds.SETTING_GET to "get_setting",
     Cmds.DEVICE_ENVIRONMENT to "get_device_environment",
+
+    // P6: Eta-parity sensitive-action tools
+    Cmds.SETTING_SET to "set_setting",
+    Cmds.DEVICE_STATE_SET to "set_device_state",
+    Cmds.APP_STATE_CONTROL to "app_state_control",
 )
 
 /**

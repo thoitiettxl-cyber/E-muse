@@ -8,6 +8,7 @@ import io.github.thoitiet.emuse.exec.DeviceExecutor
 import io.github.thoitiet.emuse.exec.FileExecutor
 import io.github.thoitiet.emuse.exec.InputExecutor
 import io.github.thoitiet.emuse.exec.ScreenExecutor
+import io.github.thoitiet.emuse.exec.SensitiveActionExecutor
 import io.github.thoitiet.emuse.exec.SensitiveReadExecutor
 import io.github.thoitiet.emuse.exec.ShellExecutor
 import io.github.thoitiet.emuse.exec.SystemExecutor
@@ -34,6 +35,7 @@ class CommandDispatcher(
     private val clipboard = ClipboardExecutor(appCtx)
     private val device = DeviceExecutor(appCtx)
     private val sensitiveRead = SensitiveReadExecutor(appCtx)
+    private val sensitiveAction = SensitiveActionExecutor(appCtx)
 
     init {
         ShellExecutor.reset()
@@ -53,16 +55,26 @@ class CommandDispatcher(
         val toolName = TOOL_NAME_BY_CMD[cmd.cmd]
         if (toolName != null) {
             groupBlockReason(toolName) { prefs.isGroupEnabled(it) }?.let { reason ->
+                onEvent("⛔ $toolName: ${reason.take(100)}")
                 return DeviceResult(cmd.id, false, error = reason)
             }
         }
+        // Drive the floating overlay: start line (▶ also flips the orb busy),
+        // then ✔/✖ so the bubble shows the command log including errors.
+        val label = toolName ?: cmd.cmd
+        onEvent("▶ $label${shortArgs(cmd)}")
         return try {
             val result = withTimeout(timeoutMs.coerceIn(1_000L, 120_000L)) { execute(cmd) }
+            onEvent("✔ $label")
             DeviceResult(cmd.id, true, result)
         } catch (e: TimeoutCancellationException) {
-            DeviceResult(cmd.id, false, error = "command timed out after ${timeoutMs}ms")
+            val err = "command timed out after ${timeoutMs}ms"
+            onEvent("✖ $label: $err")
+            DeviceResult(cmd.id, false, error = err)
         } catch (e: Exception) {
-            DeviceResult(cmd.id, false, error = e.message ?: e.javaClass.simpleName)
+            val err = e.message ?: e.javaClass.simpleName
+            onEvent("✖ $label: ${err.take(120)}")
+            DeviceResult(cmd.id, false, error = err)
         }
     }
 
@@ -124,6 +136,10 @@ class CommandDispatcher(
             Cmds.LOGCAT_GET -> "n=${a.optInt("max_lines", 200)} q=${a.optString("query", "")}"
             Cmds.SETTING_GET -> "${a.optString("namespace", "")}.${a.optString("key", "")}"
             Cmds.DEVICE_ENVIRONMENT -> ""
+            Cmds.SETTING_SET -> "${a.optString("namespace", "")}.${a.optString("key", "")}"
+            Cmds.DEVICE_STATE_SET ->
+                "${a.optString("target", "")}=${if (a.optBoolean("enabled", false)) "on" else "off"}"
+            Cmds.APP_STATE_CONTROL -> "${a.optString("action", "")} ${a.optString("package_name", "")}"
             Cmds.INPUT_WAIT -> "${a.optInt("durationMs", 1_000)}ms"
             Cmds.SYSTEM_PANEL -> a.optString("panel")
             Cmds.INPUT_TEXT -> a.optString("text").take(20)
@@ -301,6 +317,17 @@ class CommandDispatcher(
             Cmds.LOGCAT_GET -> sensitiveRead.getLogcat(a)
             Cmds.SETTING_GET -> sensitiveRead.getSetting(a)
             Cmds.DEVICE_ENVIRONMENT -> sensitiveRead.getDeviceEnvironment(a)
+
+            // P6 sensitive-action
+            Cmds.SETTING_SET -> sensitiveAction.setSetting(
+                a.getString("namespace"), a.getString("key"), a.getString("value"),
+            )
+            Cmds.DEVICE_STATE_SET -> sensitiveAction.setDeviceState(
+                a.getString("target"), a.getBoolean("enabled"),
+            )
+            Cmds.APP_STATE_CONTROL -> sensitiveAction.appStateControl(
+                a.getString("package_name"), a.getString("action"),
+            )
 
             else -> throw IllegalArgumentException("unknown cmd: ${cmd.cmd}")
         }

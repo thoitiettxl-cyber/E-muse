@@ -291,6 +291,38 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         withDevice(""),
         true, false, true, false, "query", "device.environment",
     ),
+    // ---- P6: Eta-parity sensitive-action tools (root-only, like Eta) ----
+    ToolDef(
+        "set_setting",
+        "Change one Android Settings value. Root-only.",
+        withDevice(
+            "\"namespace\":{\"type\":\"string\",\"enum\":[\"system\",\"secure\",\"global\"],\"description\":\"Settings namespace.\"}," +
+                "\"key\":{\"type\":\"string\",\"maxLength\":200,\"description\":\"Exact settings key.\"}," +
+                "\"value\":{\"type\":\"string\",\"maxLength\":2000,\"description\":\"New value.\"}",
+            "\"namespace\",\"key\",\"value\"",
+        ),
+        false, true, true, false, "write", "setting.set",
+    ),
+    ToolDef(
+        "set_device_state",
+        "Enable or disable Wi-Fi/Bluetooth directly; do not operate the Settings GUI. Root-only.",
+        withDevice(
+            "\"target\":{\"type\":\"string\",\"enum\":[\"wifi\",\"bluetooth\"],\"description\":\"Device capability.\"}," +
+                "\"enabled\":{\"type\":\"boolean\",\"description\":\"true enables, false disables.\"}",
+            "\"target\",\"enabled\"",
+        ),
+        false, true, true, false, "write", "device.state",
+    ),
+    ToolDef(
+        "app_state_control",
+        "Force-stop, freeze, or unfreeze an exact package name, including system apps. Root-only.",
+        withDevice(
+            "\"package_name\":{\"type\":\"string\",\"maxLength\":255,\"description\":\"Exact Android package name.\"}," +
+                "\"action\":{\"type\":\"string\",\"enum\":[\"force_stop\",\"freeze\",\"unfreeze\"],\"description\":\"Action to perform.\"}",
+            "\"package_name\",\"action\"",
+        ),
+        false, true, true, false, "write", "app.state_control",
+    ),
     ToolDef(
         "shell_exec",
         "Execute a shell command on the device. Runs as the app user via 'sh -c' by default; set asRoot to run via 'su -c' when the device is rooted.",

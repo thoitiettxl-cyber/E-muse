@@ -71,6 +71,9 @@ object Cmds {
     const val LOGCAT_GET = "logcat.get"
     const val SETTING_GET = "setting.get"
     const val DEVICE_ENVIRONMENT = "device.environment"
+    const val SETTING_SET = "setting.set"
+    const val DEVICE_STATE_SET = "device.state"
+    const val APP_STATE_CONTROL = "app.state_control"
 }
 
 data class DeviceCommand(val id: String, val cmd: String, val args: JSONObject) {
