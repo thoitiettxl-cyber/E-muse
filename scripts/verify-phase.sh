@@ -13,6 +13,13 @@ BASE="${1:-origin/eta-parity}"
 FAIL=0
 fail() { echo "FAIL: $1"; FAIL=1; }
 
+# A missing base ref used to make the diff below silently empty, so every
+# check "passed" on zero files. Fail closed instead.
+if ! git rev-parse --verify --quiet "$BASE" >/dev/null; then
+  echo "FAIL: cannot resolve base ref '$BASE' — fetch it first (e.g. git fetch origin ${BASE#origin/})"
+  exit 1
+fi
+
 KOTLIN_FILES=$( {
   git diff --name-only HEAD -- 'app/src/main/java/**/*.kt' 2>/dev/null
   git diff --name-only "$BASE"...HEAD -- 'app/src/main/java/**/*.kt' 2>/dev/null

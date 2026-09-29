@@ -50,6 +50,11 @@ jobs:
       - name: Install Android SDK 34
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
+      - name: Verify phase wiring
+        run: |
+          git fetch --no-tags origin eta-parity || true
+          bash scripts/verify-phase.sh
+
       - name: Restore release keystore
         env:
           EMUSE_KEYSTORE_BASE64: ${{ secrets.EMUSE_KEYSTORE_BASE64 }}
@@ -115,7 +120,7 @@ jobs:
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release_tag }}
           name: E-Muse ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release_tag }}
