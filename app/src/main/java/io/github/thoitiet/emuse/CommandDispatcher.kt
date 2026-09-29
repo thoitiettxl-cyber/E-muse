@@ -26,6 +26,10 @@ class CommandDispatcher(
     private val apps = AppExecutor(appCtx)
     private val files = FileExecutor(appCtx)
 
+    init {
+        ScreenExecutor.configure(appCtx.resources.displayMetrics.densityDpi)
+    }
+
     fun dispatch(cmd: DeviceCommand) {
         scope.launch {
             val res = try {

@@ -1,9 +1,11 @@
 package io.github.thoitiet.emuse
 
 import android.Manifest
+import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -14,15 +16,30 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import io.github.thoitiet.emuse.exec.ScreenCapture
 import io.github.thoitiet.emuse.exec.ShellExecutor
 
 class MainActivity : AppCompatActivity() {
     private lateinit var urlInput: EditText
     private lateinit var keyInput: EditText
     private lateinit var statusView: TextView
+
+    private val projectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val mgr = getSystemService(MediaProjectionManager::class.java)
+            ScreenCapture.setProjection(mgr.getMediaProjection(result.resultCode, result.data!!))
+            toast("Đã cấp quyền chụp màn hình")
+        } else {
+            toast("Chưa cấp quyền chụp màn hình")
+        }
+        refresh()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,6 +93,13 @@ class MainActivity : AppCompatActivity() {
             text = "Mở cài đặt Accessibility"
             setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         }
+        val projection = Button(this).apply {
+            text = "Cấp quyền chụp màn hình"
+            setOnClickListener {
+                val mgr = getSystemService(MediaProjectionManager::class.java)
+                projectionLauncher.launch(mgr.createScreenCaptureIntent())
+            }
+        }
         statusView = TextView(this)
 
         root.addView(label("Worker URL"))
@@ -88,6 +112,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(start)
         root.addView(stop)
         root.addView(acc)
+        root.addView(projection)
         root.addView(spacer(24))
         root.addView(label("Trạng thái:"))
         root.addView(statusView)
@@ -121,6 +146,7 @@ class MainActivity : AppCompatActivity() {
                     appendLine("Service: ${if (MuseService.running) "đang chạy" else "đã dừng"}")
                     appendLine("Root: ${if (root) "có" else "không"}")
                     appendLine("Accessibility: ${if (acc) "đã bật" else "chưa bật"}")
+                    appendLine("Chụp màn hình: ${if (ScreenCapture.hasProjection()) "MediaProjection" else if (root) "root screencap" else "chưa có"}")
                 }
             }
         }.start()

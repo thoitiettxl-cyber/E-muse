@@ -3,19 +3,29 @@ package io.github.thoitiet.emuse.exec
 import org.json.JSONObject
 
 object ScreenExecutor {
-    /**
-     * Set to true by MainActivity after the MediaProjection permission flow.
-     * TODO: wire an ActivityResultLauncher with
-     *   (getSystemService(MediaProjectionManager::class.java)).createScreenCaptureIntent()
-     * and feed the resulting MediaProjection into a capture pipeline
-     * (ImageReader -> PNG). Until then, capture() uses root screencap.
-     */
     @Volatile
-    var projectionGranted: Boolean = false
+    private var densityDpi: Int = 0
+
+    fun configure(densityDpi: Int) {
+        this.densityDpi = densityDpi
+    }
 
     fun capture(): JSONObject {
-        // TODO: when projectionGranted is true, acquire the latest Image from the
-        // ImageReader, compress to PNG and base64 it here.
+        // 1) MediaProjection (no root needed) once the user granted it.
+        if (ScreenCapture.hasProjection()) {
+            val (w, h) = DeviceScreen.size()
+            val png = runCatching {
+                ScreenCapture.capturePng(w, h, densityDpi.takeIf { it > 0 } ?: 420)
+            }.getOrNull()
+            if (png != null && png.isNotEmpty()) {
+                return JSONObject()
+                    .put("pngBase64", android.util.Base64.encodeToString(png, android.util.Base64.NO_WRAP))
+                    .put("width", w)
+                    .put("height", h)
+                    .put("via", "mediaProjection")
+            }
+        }
+        // 2) Root screencap fallback.
         if (ShellExecutor.hasRoot()) {
             val tmp = "/data/local/tmp/emuse_cap.png"
             val r = ShellExecutor.exec(
@@ -29,10 +39,11 @@ object ScreenExecutor {
                     .put("pngBase64", b64)
                     .put("width", w)
                     .put("height", h)
+                    .put("via", "root")
             }
         }
         throw IllegalStateException(
-            "screen.capture unavailable: needs root, or a MediaProjection grant (see TODO above)",
+            "screen.capture unavailable: grant MediaProjection or root",
         )
     }
 }
