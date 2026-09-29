@@ -118,6 +118,12 @@ class AppExecutor(private val ctx: Context) {
     /** Writes the APK into a PackageInstaller session and commits it.
      * The system shows a user confirmation dialog; result goes to InstallReceiver. */
     fun install(apkBase64: String): JSONObject {
+        if (Build.VERSION.SDK_INT >= 26 && !pm.canRequestPackageInstalls()) {
+            throw SecurityException(
+                "Unknown app sources not allowed for E-Muse. " +
+                "Grant it in Android Settings -> Apps -> E-Muse -> Install unknown apps, then retry.",
+            )
+        }
         val bytes = Base64.decode(apkBase64, Base64.DEFAULT)
         val installer = pm.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)

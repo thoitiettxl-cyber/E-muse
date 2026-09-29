@@ -5,6 +5,12 @@
 #   - P4: Android API used without the matching <uses-permission> in the manifest
 #   - wiring drift between Protocol / ToolDefs / ToolGroups / CommandDispatcher
 #
+# LIMITATION (by design): this script checks syntax/wiring only. It does NOT
+# resolve Kotlin symbols, so an unresolved reference (e.g. a Prefs property
+# deleted by one batch while another batch still uses it) passes here and is
+# only caught by a real Gradle build. CI still runs :app:assembleRelease,
+# which is the true gate.
+#
 # Usage: scripts/verify-phase.sh [base]   (default base: origin/eta-parity)
 set -u
 cd "$(dirname "$0")/.."

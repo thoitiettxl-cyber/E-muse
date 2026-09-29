@@ -686,6 +686,7 @@ class MainActivity : AppCompatActivity() {
                 else -> "chưa có"
             }
             runOnUiThread {
+                if (isDestroyed || isFinishing) return@runOnUiThread
                 // status card
                 statusCard.removeAllViews()
                 infoRow(statusCard, "Service", if (MuseService.running) "đang chạy" else "đã dừng")

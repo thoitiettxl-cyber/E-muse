@@ -308,7 +308,8 @@ class TunnelManager(
                 delay(backoffMs)
                 backoffMs = minOf(backoffMs * 2, 60_000L)
             }
-            if (!wantRunning) setState(State.Stopped)
+            // S1: don't clobber a Failed state (e.g. SHA-256 pin mismatch) with Stopped.
+            if (!wantRunning && state !is State.Failed) setState(State.Stopped)
         }
     }
 
@@ -351,12 +352,25 @@ class TunnelManager(
                 return
             }
             val cmd = runCatching { handle.info().command().orElse("") }.getOrDefault("")
-            if (cmd.isEmpty() || cmd != binaryFile().absolutePath) {
+            val binPath = binaryFile().absolutePath
+            // S3: su-fallback path — the pidfile PID is `su` itself, the real
+            // cloudflared is a descendant. Kill the matching descendants first,
+            // then the su wrapper.
+            val isSu = cmd == "/system/bin/su" || cmd.endsWith("/su")
+            if (cmd.isEmpty() || (cmd != binPath && !isSu)) {
                 // Không xác minh được chủ PID (hoặc PID đã tái sử dụng) -> không kill bừa.
                 f.delete()
                 return
             }
-            handle.destroyForcibly()
+            val targets = mutableListOf<ProcessHandle>()
+            if (isSu) {
+                handle.descendants().forEach { d ->
+                    val dcmd = runCatching { d.info().command().orElse("") }.getOrDefault("")
+                    if (dcmd == binPath) targets += d
+                }
+            }
+            targets += handle
+            targets.forEach { runCatching { it.destroyForcibly() } }
             f.delete()
         } catch (_: Exception) {
             runCatching { f.delete() }
@@ -544,7 +558,14 @@ class TunnelManager(
     private fun destroyNow(p: Process) {
         try {
             p.destroy()
-            if (!p.waitFor(3, TimeUnit.SECONDS)) p.destroyForcibly()
+            // S2: never block the caller (may be the main thread) on the 3s reap —
+            // finish the forced kill on a background thread.
+            Thread({
+                try {
+                    if (!p.waitFor(3, TimeUnit.SECONDS)) p.destroyForcibly()
+                } catch (_: Exception) {
+                }
+            }, "emuse-tunnel-reap").apply { isDaemon = true }.start()
         } catch (_: Exception) {
         }
     }

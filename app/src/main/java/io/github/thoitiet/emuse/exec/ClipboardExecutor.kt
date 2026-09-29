@@ -64,7 +64,16 @@ class ClipboardExecutor(private val appCtx: Context) {
                 val cm = manager()
                 val previous = cm.primaryClip
                 cm.setPrimaryClip(ClipData.newPlainText("emuse", text))
-                if (!focused.performAction(AccessibilityNodeInfo.ACTION_PASTE)) {
+                // S4: performAction itself can throw (stale node) — restore
+                // the clipboard on that path too, not only on `false`.
+                val pasted = try {
+                    focused.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+                } catch (e: Exception) {
+                    if (previous != null) cm.setPrimaryClip(previous)
+                    else cm.clearPrimaryClip()
+                    throw e
+                }
+                if (!pasted) {
                     if (previous != null) cm.setPrimaryClip(previous)
                     else cm.clearPrimaryClip()
                     throw IllegalStateException(

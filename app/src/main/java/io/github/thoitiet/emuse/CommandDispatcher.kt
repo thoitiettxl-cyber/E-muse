@@ -88,13 +88,13 @@ class CommandDispatcher(
     private fun shortArgs(cmd: DeviceCommand): String {
         val a = cmd.args
         val s = when (cmd.cmd) {
-            Cmds.SHELL_EXEC -> a.optString("command").take(20)
+            Cmds.SHELL_EXEC -> "cmd=<${a.optString("command").length} chars>"
             Cmds.APP_INFO, Cmds.APP_UNINSTALL, Cmds.APP_STOP -> a.optString("package")
             Cmds.APP_LIST -> a.optString("query").ifEmpty { if (a.optBoolean("system", false)) "system" else "" }
             Cmds.APP_START -> a.optString("package")
                 .ifEmpty { a.optString("app_name") }
                 .ifEmpty { a.optString("action") }
-            Cmds.APP_OPEN_URI -> a.optString("uri").take(40)
+            Cmds.APP_OPEN_URI -> "uri=<${a.optString("uri").length} chars>"
             Cmds.FILE_LIST, Cmds.FILE_PULL, Cmds.FILE_PUSH, Cmds.FILE_DELETE -> a.optString("path")
             Cmds.INPUT_TAP -> "(${a.optInt("x")}, ${a.optInt("y")})"
             Cmds.INPUT_TAP_AREA -> "(${a.optInt("x1")},${a.optInt("y1")})-(${a.optInt("x2")},${a.optInt("y2")})"
@@ -103,7 +103,7 @@ class CommandDispatcher(
             Cmds.INPUT_LONG_PRESS_ELEMENT -> "element=${a.optString("elementId")}"
             Cmds.INPUT_SCROLL -> a.optString("direction")
             Cmds.INPUT_SCROLL_ELEMENT -> "element=${a.optString("elementId")} ${a.optString("direction")}"
-            Cmds.UI_WAIT_TEXT -> a.optString("text").take(20)
+            Cmds.UI_WAIT_TEXT -> "text=<${a.optString("text").length} chars>"
             Cmds.UI_WAIT_PACKAGE -> a.optString("package_name")
             Cmds.UI_OBSERVE -> "screenshot=${a.optBoolean("include_screenshot", false)}"
             Cmds.DEVICE_CONTEXT -> ""

@@ -5,13 +5,13 @@ package io.github.thoitiet.emuse
  * (AGENT_TERMINAL_TOOLS / AGENT_DEVICE_DIRECT_TOOLS /
  * AGENT_DEVICE_SENSITIVE_READ_TOOLS / AGENT_DEVICE_SENSITIVE_ACTION_TOOLS).
  *
- * Two independent enforcement layers exist in E-muse:
+ * Two independent enforcement layers exist in E-Muse:
  *  - tool_flags: per-tool on/off (runtime, via the tool_flags tool)
  *  - group switches: per-group on/off (UI toggles in MainActivity)
  * A tool is blocked when EITHER its flag is off OR its group is off.
  *
  * Differences from Eta (product decisions):
- *  - E-muse adds a UI switch for sensitive_read (Eta has none).
+ *  - E-Muse adds a UI switch for sensitive_read (Eta has none).
  *  - No browser group: browser_use was dropped, an empty switch is pointless.
  *  - Both sensitive groups default OFF (Eta defaults everything on).
  */

@@ -38,6 +38,16 @@ class Prefs(ctx: Context) {
         get() = sp.getString("tunnel_hostname", "") ?: ""
         set(v) = sp.edit().putString("tunnel_hostname", v).apply()
 
+    /** SHA-256 pin of the cloudflared binary (TOFU; empty = not pinned yet). */
+    var cloudflaredSha256: String
+        get() = sp.getString("cloudflared_sha256", "") ?: ""
+        set(v) = sp.edit().putString("cloudflared_sha256", v).apply()
+
+    /** SHA-256 pin of the bundled CA bundle (TOFU; empty = not pinned yet). */
+    var caBundleSha256: String
+        get() = sp.getString("cabundle_sha256", "") ?: ""
+        set(v) = sp.edit().putString("cabundle_sha256", v).apply()
+
     /** Local MCP server port (localhost only). */
     var mcpPort: Int
         get() = sp.getInt("mcp_port", 18789)

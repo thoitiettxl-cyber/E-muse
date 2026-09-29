@@ -31,6 +31,7 @@ class MuseService : Service() {
         const val ACTION_STOP = "io.github.thoitiet.emuse.ACTION_STOP"
         const val ACTION_START_PROJECTION = "io.github.thoitiet.emuse.ACTION_START_PROJECTION"
         const val ACTION_SET_TUNNEL = "io.github.thoitiet.emuse.ACTION_SET_TUNNEL"
+        const val ACTION_RESTART_TUNNEL = "io.github.thoitiet.emuse.ACTION_RESTART_TUNNEL"
         const val EXTRA_TUNNEL_ENABLED = "tunnel_enabled"
         const val EXTRA_MP_RESULT_CODE = "mp_result_code"
         const val EXTRA_MP_DATA = "mp_data"
@@ -64,6 +65,7 @@ class MuseService : Service() {
         val prefs = Prefs(this)
         val handler = McpHandler(dispatcher, prefs) { directDeviceJson() }
         val port = prefs.mcpPort
+        var bindOk = false
         try {
             localServer = LocalHttpServer(port) { method, path, headers, body ->
                 val r = handler.handleHttp(method, path, headers, body)
@@ -73,6 +75,7 @@ class MuseService : Service() {
                     headers = r.headers,
                 )
             }.also { it.start() }
+            bindOk = true
             FloatingOverlay.event("MCP direct: 127.0.0.1:$port")
         } catch (e: Exception) {
             FloatingOverlay.event("MCP direct lỗi: ${e.message?.take(60)}")
@@ -98,12 +101,17 @@ class MuseService : Service() {
             }
         }
         if (prefs.tunnelEnabled) {
-            tm.start(
-                "http://127.0.0.1:$port",
-                prefs.tunnelToken,
-                prefs.tunnelHostname,
-            ) { done, total ->
-                if (total > 0) FloatingOverlay.event("Tải cloudflared ${(done * 100 / total)}%")
+            if (!bindOk) {
+                // Never point a public tunnel at a dead local server.
+                tm.failNow("MCP local bind thất bại — không start tunnel")
+            } else {
+                tm.start(
+                    "http://127.0.0.1:$port",
+                    prefs.tunnelToken,
+                    prefs.tunnelHostname,
+                ) { done, total ->
+                    if (total > 0) FloatingOverlay.event("Tải cloudflared ${(done * 100 / total)}%")
+                }
             }
         }
     }
@@ -152,6 +160,11 @@ class MuseService : Service() {
         }
         if (intent?.action == ACTION_SET_TUNNEL) {
             setTunnelEnabled(intent.getBooleanExtra(EXTRA_TUNNEL_ENABLED, false))
+            return START_STICKY
+        }
+        if (intent?.action == ACTION_RESTART_TUNNEL) {
+            // Token/hostname changed while running: restart tunnel with current prefs.
+            setTunnelEnabled(Prefs(this).tunnelEnabled)
             return START_STICKY
         }
         if (intent?.action == ACTION_START_PROJECTION) {

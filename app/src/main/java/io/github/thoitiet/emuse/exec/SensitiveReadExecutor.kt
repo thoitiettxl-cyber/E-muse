@@ -67,7 +67,7 @@ class SensitiveReadExecutor(private val appCtx: Context) {
         return err(
             "PERMISSION_REQUIRED",
             "Missing runtime permission(s): ${missing.joinToString(", ")}. " +
-                "Grant in Android Settings -> Apps -> E-muse -> Permissions, then retry.",
+                "Grant in Android Settings -> Apps -> E-Muse -> Permissions, then retry.",
             tool,
         )
     }
@@ -88,7 +88,7 @@ class SensitiveReadExecutor(private val appCtx: Context) {
         return err(
             "PERMISSION_REQUIRED",
             "Missing runtime permission(s): ${names.joinToString(", ")}. " +
-                "Grant in Android Settings -> Apps -> E-muse -> Permissions, then retry.",
+                "Grant in Android Settings -> Apps -> E-Muse -> Permissions, then retry.",
             tool,
         )
     }
@@ -103,7 +103,7 @@ class SensitiveReadExecutor(private val appCtx: Context) {
         if (mode == AppOpsManager.MODE_ALLOWED) return null
         return err(
             "USAGE_ACCESS_REQUIRED",
-            "Grant usage access in Android Settings -> Special app access -> Usage access -> E-muse, then retry.",
+            "Grant usage access in Android Settings -> Special app access -> Usage access -> E-Muse, then retry.",
             tool,
         )
     }
@@ -532,7 +532,7 @@ class SensitiveReadExecutor(private val appCtx: Context) {
                 "PERMISSION_REQUIRED",
                 "Missing runtime permission(s): ${Manifest.permission.ACCESS_FINE_LOCATION} " +
                     "(or ${Manifest.permission.ACCESS_COARSE_LOCATION}). " +
-                    "Grant in Android Settings -> Apps -> E-muse -> Permissions, then retry.",
+                    "Grant in Android Settings -> Apps -> E-Muse -> Permissions, then retry.",
                 tool,
             )
         }
