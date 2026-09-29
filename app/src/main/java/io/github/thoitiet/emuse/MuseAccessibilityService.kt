@@ -9,6 +9,22 @@ import android.view.accessibility.AccessibilityEvent
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
+/**
+ * Outcome of a gesture dispatch, in the spirit of Eta's MainThreadCallGate:
+ * a timeout does NOT prove the gesture never ran, so [UNKNOWN] must never be
+ * replayed (not even via the root fallback) — the caller must re-observe.
+ */
+enum class GestureOutcome {
+    /** Callback confirmed the gesture completed. */
+    DISPATCHED,
+
+    /** dispatchGesture() refused: nothing was submitted, root fallback is safe. */
+    NOT_STARTED,
+
+    /** Timeout or cancelled after dispatch: may already have executed. Do NOT replay. */
+    UNKNOWN,
+}
+
 class MuseAccessibilityService : AccessibilityService() {
     companion object {
         @Volatile
@@ -28,34 +44,44 @@ class MuseAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
 
-    private fun gesture(path: Path, durationMs: Long): Boolean {
+    private fun gesture(path: Path, durationMs: Long): GestureOutcome {
         val latch = CountDownLatch(1)
-        var ok = false
+        var completed = false
+        var cancelled = false
         val desc = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
             .build()
-        dispatchGesture(
+        val submitted = dispatchGesture(
             desc,
             object : GestureResultCallback() {
                 override fun onCompleted(gestureDescription: GestureDescription?) {
-                    ok = true
+                    completed = true
                     latch.countDown()
                 }
 
                 override fun onCancelled(gestureDescription: GestureDescription?) {
+                    cancelled = true
                     latch.countDown()
                 }
             },
             null,
         )
-        latch.await(8, TimeUnit.SECONDS)
-        return ok
+        // dispatchGesture() == false: the system refused outright — nothing ran.
+        if (!submitted) return GestureOutcome.NOT_STARTED
+        val finished = latch.await(8, TimeUnit.SECONDS)
+        return when {
+            completed -> GestureOutcome.DISPATCHED
+            // Cancelled after dispatch, or latch timeout: the gesture may already
+            // have executed. Replaying (even via root) risks a double action.
+            cancelled || !finished -> GestureOutcome.UNKNOWN
+            else -> GestureOutcome.UNKNOWN
+        }
     }
 
-    fun tap(x: Float, y: Float): Boolean =
+    fun tap(x: Float, y: Float): GestureOutcome =
         gesture(Path().apply { moveTo(x, y) }, 50)
 
-    fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long): Boolean =
+    fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long): GestureOutcome =
         gesture(
             Path().apply { moveTo(x1, y1); lineTo(x2, y2) },
             durationMs.coerceAtLeast(50),

@@ -2,6 +2,7 @@ package io.github.thoitiet.emuse.exec
 
 import android.os.Bundle
 import android.view.accessibility.AccessibilityNodeInfo
+import io.github.thoitiet.emuse.GestureOutcome
 import io.github.thoitiet.emuse.MuseAccessibilityService
 import org.json.JSONObject
 
@@ -31,9 +32,27 @@ object InputExecutor {
     fun tap(x: Int, y: Int): JSONObject {
         DeviceScreen.validatePoint(x, y)
         val svc = service()
-        if (svc != null && svc.tap(x.toFloat(), y.toFloat())) {
-            settleAfter("tap")
-            return JSONObject().put("ok", true).put("via", "accessibility")
+        if (svc != null) {
+            when (svc.tap(x.toFloat(), y.toFloat())) {
+                GestureOutcome.DISPATCHED -> {
+                    settleAfter("tap")
+                    return JSONObject().put("ok", true).put("via", "accessibility")
+                }
+                // NOT_STARTED: nothing was submitted — the root fallback is safe.
+                GestureOutcome.NOT_STARTED -> { /* fall through to shell */ }
+                // UNKNOWN: the gesture may already have executed (timeout or
+                // cancelled after dispatch). Replaying would risk a double tap,
+                // so the root fallback is FORBIDDEN here (Eta's no-blind-retry).
+                GestureOutcome.UNKNOWN -> return JSONObject()
+                    .put("ok", false)
+                    .put("code", "ACTION_OUTCOME_UNKNOWN")
+                    .put("via", "accessibility")
+                    .put(
+                        "note",
+                        "gesture outcome unknown (timeout/cancelled); re-observe " +
+                            "before retrying — do NOT replay",
+                    )
+            }
         }
         val res = shellOrThrow(RootCommands.inputTap(x, y), "tap")
         if (res.optBoolean("ok")) settleAfter("tap")
@@ -44,9 +63,23 @@ object InputExecutor {
         DeviceScreen.validatePoint(x1, y1)
         DeviceScreen.validatePoint(x2, y2)
         val svc = service()
-        if (svc != null && svc.swipe(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), durationMs.toLong())) {
-            settleAfter("swipe")
-            return JSONObject().put("ok", true).put("via", "accessibility")
+        if (svc != null) {
+            when (svc.swipe(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), durationMs.toLong())) {
+                GestureOutcome.DISPATCHED -> {
+                    settleAfter("swipe")
+                    return JSONObject().put("ok", true).put("via", "accessibility")
+                }
+                GestureOutcome.NOT_STARTED -> { /* fall through to shell */ }
+                GestureOutcome.UNKNOWN -> return JSONObject()
+                    .put("ok", false)
+                    .put("code", "ACTION_OUTCOME_UNKNOWN")
+                    .put("via", "accessibility")
+                    .put(
+                        "note",
+                        "gesture outcome unknown (timeout/cancelled); re-observe " +
+                            "before retrying — do NOT replay",
+                    )
+            }
         }
         val res = shellOrThrow(RootCommands.inputSwipe(x1, y1, x2, y2, durationMs), "swipe")
         if (res.optBoolean("ok")) settleAfter("swipe")

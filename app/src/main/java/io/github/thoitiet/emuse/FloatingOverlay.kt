@@ -236,10 +236,19 @@ object FloatingOverlay {
 
     // ---- helpers ----
 
-    private fun overlayParams(w: Int, h: Int, gravity: Int, x: Int, y: Int) =
-        WindowManager.LayoutParams(
+    private fun overlayParams(w: Int, h: Int, gravity: Int, x: Int, y: Int): WindowManager.LayoutParams {
+        // Eta's trick: an accessibility overlay is invisible to the accessibility
+        // tree (and to screenshots), so ui_snapshot never sees our own orb and
+        // Pi can't tap it by mistake. Fall back to the application overlay when
+        // the accessibility service isn't running.
+        val type = if (MuseAccessibilityService.instance != null) {
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        } else {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        }
+        return WindowManager.LayoutParams(
             w, h,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
         ).apply {
@@ -247,6 +256,7 @@ object FloatingOverlay {
             this.x = x
             this.y = y
         }
+    }
 
     private fun Int.dp(ctx: Context): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, toFloat(), ctx.resources.displayMetrics).toInt()
