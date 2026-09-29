@@ -51,7 +51,7 @@ class CommandDispatcher(
             Cmds.SHELL_EXEC -> ShellExecutor.exec(
                 a.getString("command"),
                 a.optBoolean("asRoot", false),
-                (a.optLong("timeoutMs", 30_000) / 1000).coerceIn(1, 120),
+                (a.optLong("timeoutMs", 30_000) / 1000).coerceIn(1L, 120L),
             ).toJson()
 
             Cmds.APP_LIST -> apps.list(a.optBoolean("system", false))

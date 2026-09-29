@@ -42,7 +42,7 @@ data class DeviceResult(
     val error: String? = null,
 ) {
     fun toJson(): JSONObject {
-        val o = JSONObject().put("id", id).put("ok", ok)
+        val o = JSONObject().put("type", "result").put("id", id).put("ok", ok)
         if (ok) o.put("result", result ?: JSONObject())
         else o.put("error", error ?: "unknown error")
         return o

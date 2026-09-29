@@ -29,8 +29,9 @@ export interface DeviceCommand {
   args: Record<string, unknown>;
 }
 
-/** App -> worker. */
+/** App -> worker. The "type" discriminator lets the Worker tell results apart. */
 export interface DeviceResult {
+  type: "result";
   id: string;
   ok: boolean;
   result?: unknown;
