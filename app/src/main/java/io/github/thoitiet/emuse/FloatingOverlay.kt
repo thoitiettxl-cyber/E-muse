@@ -137,6 +137,19 @@ object FloatingOverlay {
         }
     }
 
+    /** Clear the floating log panel and the bubble badge. */
+    fun clearLogs() {
+        main.post {
+            logs.clear()
+            logView?.text = "Chưa có lệnh nào."
+            badgeView?.let {
+                it.text = ""
+                it.visibility = View.GONE
+            }
+            setBusy(false)
+        }
+    }
+
     fun setConnected(connected: Boolean) {
         main.post {
             this.connected = connected
@@ -252,6 +265,13 @@ object FloatingOverlay {
             setTextColor(0xFFFFFFFF.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
         }
+        val clear = TextView(ctx).apply {
+            text = "🗑"
+            setTextColor(0xFF9E9E9E.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setPadding(16.dp(ctx), 8.dp(ctx), 4.dp(ctx), 8.dp(ctx))
+            setOnClickListener { clearLogs() }
+        }
         val close = TextView(ctx).apply {
             text = "✕"
             setTextColor(0xFF9E9E9E.toInt())
@@ -264,6 +284,7 @@ object FloatingOverlay {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(14.dp(ctx), 6.dp(ctx), 6.dp(ctx), 2.dp(ctx))
             addView(title, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(clear)
             addView(close)
         }
         val log = TextView(ctx).apply {
