@@ -153,11 +153,14 @@ class CommandDispatcher(
             Cmds.APP_STATE_CONTROL -> "${a.optString("action", "")} ${a.optString("package_name", "")}"
             Cmds.INPUT_WAIT -> "${a.optInt("durationMs", 1_000)}ms"
             Cmds.SYSTEM_PANEL -> a.optString("panel")
-            Cmds.INPUT_TEXT -> a.optString("text").take(20)
-            Cmds.INPUT_REPLACE_TEXT -> a.optString("text").take(20)
+            // Text content is never printed on the user-visible overlay
+            // (shoulder-surfing risk: passwords, OTPs, private messages).
+            // Length only.
+            Cmds.INPUT_TEXT -> "text=${a.optString("text").length} chars"
+            Cmds.INPUT_REPLACE_TEXT -> "text=${a.optString("text").length} chars"
             Cmds.INPUT_CLEAR_TEXT -> "element=${a.optString("elementId")}"
-            Cmds.INPUT_PASTE -> a.optString("text").take(20)
-            Cmds.CLIPBOARD_SET -> a.optString("text").take(20)
+            Cmds.INPUT_PASTE -> "text=${a.optString("text").length} chars"
+            Cmds.CLIPBOARD_SET -> "text=${a.optString("text").length} chars"
             Cmds.CLIPBOARD_GET -> ""
             Cmds.INPUT_KEY -> {
                 val b = a.optString("button")
