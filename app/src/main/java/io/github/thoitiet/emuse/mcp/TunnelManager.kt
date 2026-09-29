@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Manages the cloudflared quick-tunnel process that exposes the on-device
- * MCP server (127.0.0.1:PORT) on a public https://*.trycloudflare.com URL.
+ * MCP server (127.0.0.1:PORT) on a public trycloudflare.com URL.
  *
  * The binary (~35MB arm64) is downloaded on first use into the app's
  * private files dir — it is NOT bundled in the APK.
