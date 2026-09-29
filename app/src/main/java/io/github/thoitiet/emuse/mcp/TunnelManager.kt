@@ -35,6 +35,12 @@ class TunnelManager(
         private const val BINARY_NAME = "cloudflared"
         private const val DOWNLOAD_URL =
             "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
+        // Go binaries cannot read Android's system CA store, so every TLS
+        // handshake fails with "x509: certificate signed by unknown authority".
+        // Ship our own Mozilla bundle and point Go at it via SSL_CERT_FILE.
+        private const val CA_BUNDLE_NAME = "cacert.pem"
+        private const val CA_BUNDLE_URL = "https://curl.se/ca/cacert.pem"
+        private const val CA_BUNDLE_MIN_BYTES = 100_000L
         private val URL_RE = Regex("https://[a-z0-9-]+\\.trycloudflare\\.com")
         private const val URL_TIMEOUT_MS = 60_000L
     }
@@ -49,6 +55,7 @@ class TunnelManager(
     private var supervisor: Job? = null
     private var wantRunning = false
     private var localUrl = ""
+    private var lastErrTail: List<String> = emptyList()
 
     private fun setState(s: State) {
         state = s
@@ -56,6 +63,36 @@ class TunnelManager(
     }
 
     fun binaryFile(): File = File(appCtx.filesDir, BINARY_NAME)
+
+    private fun caBundleFile(): File = File(appCtx.filesDir, CA_BUNDLE_NAME)
+
+    /** Download the Mozilla CA bundle (Go on Android can't read the system store). */
+    private suspend fun ensureCaBundle(): File? = withContext(Dispatchers.IO) {
+        val ca = caBundleFile()
+        if (ca.exists() && ca.length() > CA_BUNDLE_MIN_BYTES) return@withContext ca
+        try {
+            val tmp = File(appCtx.filesDir, "$CA_BUNDLE_NAME.tmp")
+            val conn = openFollowRedirects(CA_BUNDLE_URL)
+            if (conn.responseCode !in 200..299) {
+                conn.disconnect()
+                return@withContext null
+            }
+            conn.inputStream.use { input ->
+                tmp.outputStream().use { output -> input.copyTo(output) }
+            }
+            conn.disconnect()
+            // Sanity: must look like a PEM bundle.
+            val head = tmp.inputStream().bufferedReader().use { it.readLine() } ?: ""
+            if (tmp.length() < CA_BUNDLE_MIN_BYTES || !head.contains("BEGIN CERTIFICATE")) {
+                tmp.delete()
+                return@withContext null
+            }
+            tmp.renameTo(ca)
+            ca
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     /** Download cloudflared arm64 on first use. Returns null on failure. */
     suspend fun ensureBinary(onProgress: (done: Long, total: Long) -> Unit): File? =
@@ -131,10 +168,11 @@ class TunnelManager(
                 wantRunning = false
                 return@launch
             }
+            val caBundle = ensureCaBundle() // null -> cloudflared falls back to its default roots
             var backoffMs = 5_000L
             while (wantRunning) {
                 setState(State.Starting)
-                val ok = runOnce(bin)
+                val ok = runOnce(bin, caBundle)
                 if (!wantRunning) break
                 if (ok) backoffMs = 5_000L // reset after a healthy run
                 delay(backoffMs)
@@ -158,7 +196,7 @@ class TunnelManager(
      * Run cloudflared once. Returns true when it stayed up (URL obtained and
      * process lived); false when it exited early / never produced a URL.
      */
-    private suspend fun runOnce(bin: File): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun runOnce(bin: File, caBundle: File?): Boolean = withContext(Dispatchers.IO) {
         // Prefer QUIC; fall back to http2 when UDP is blocked on this network.
         for (proto in listOf(null, "http2")) {
             if (!wantRunning) return@withContext false
@@ -170,7 +208,7 @@ class TunnelManager(
                 args.add(proto)
             }
             val p = try {
-                startProcess(bin, args)
+                startProcess(bin, args, caBundle)
             } catch (e: Exception) {
                 if (!wantRunning) return@withContext false
                 continue // try next protocol / backoff
@@ -190,16 +228,27 @@ class TunnelManager(
             killProc()
             // No URL: try the next protocol before giving up this round.
         }
-        if (wantRunning) setState(State.Failed("cloudflared không tạo được tunnel (thử QUIC + http2)"))
+        if (wantRunning) {
+            val tail = lastErrTail.takeLast(2).joinToString(" | ").take(160)
+            val reason = "cloudflared không tạo được tunnel (thử QUIC + http2)" +
+                (if (tail.isNotEmpty()) " — $tail" else "")
+            setState(State.Failed(reason))
+        }
         false
     }
 
-    private fun startProcess(bin: File, args: List<String>): Process {
+    private fun startProcess(bin: File, args: List<String>, caBundle: File?): Process {
+        // Go's TLS stack honors SSL_CERT_FILE; Android's system store is
+        // invisible to it, so hand it our bundled Mozilla roots.
+        val envPrefix = if (caBundle != null) "SSL_CERT_FILE='${caBundle.absolutePath}' " else ""
         return try {
-            ProcessBuilder(args).redirectErrorStream(false).start()
+            ProcessBuilder(args).apply {
+                redirectErrorStream(false)
+                if (caBundle != null) environment()["SSL_CERT_FILE"] = caBundle.absolutePath
+            }.start()
         } catch (e: Exception) {
             // Fallback: some ROMs block exec from the app data dir; use root.
-            ProcessBuilder("su", "-c", args.joinToString(" ") { "'$it'" }).start()
+            ProcessBuilder("su", "-c", envPrefix + args.joinToString(" ") { "'$it'" }).start()
         }
     }
 
@@ -207,14 +256,20 @@ class TunnelManager(
     private fun waitForUrl(p: Process): String? {
         val deadline = System.currentTimeMillis() + URL_TIMEOUT_MS
         val reader = p.errorStream.bufferedReader()
+        val tail = ArrayDeque<String>()
         try {
             while (System.currentTimeMillis() < deadline) {
-                if (!p.isAlive) return null
+                if (!p.isAlive) {
+                    lastErrTail = tail.toList()
+                    return null
+                }
                 val line = if (reader.ready()) reader.readLine() else null
                 if (line == null) {
                     Thread.sleep(200)
                     continue
                 }
+                tail.addLast(line.take(200))
+                if (tail.size > 10) tail.removeFirst()
                 URL_RE.find(line)?.let { return it.value }
                 if (line.contains("failed", ignoreCase = true) &&
                     line.contains("tunnel", ignoreCase = true)
@@ -224,6 +279,7 @@ class TunnelManager(
             }
         } catch (_: Exception) {
         }
+        lastErrTail = tail.toList()
         return null
     }
 
