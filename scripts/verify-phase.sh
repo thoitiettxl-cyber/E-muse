@@ -27,9 +27,9 @@ if ! git rev-parse --verify --quiet "$BASE" >/dev/null; then
 fi
 
 KOTLIN_FILES=$( {
-  git diff --name-only HEAD -- 'app/src/main/java/**/*.kt' 2>/dev/null
-  git diff --name-only "$BASE"...HEAD -- 'app/src/main/java/**/*.kt' 2>/dev/null
-} | sort -u )
+  git diff --name-only --diff-filter=ACM HEAD -- 'app/src/main/java/**/*.kt' 2>/dev/null
+  git diff --name-only --diff-filter=ACM "$BASE"...HEAD -- 'app/src/main/java/**/*.kt' 2>/dev/null
+} | sort -u | while read -r f; do [ -f "$f" ] && echo "$f"; done )
 if [ -z "$KOTLIN_FILES" ]; then
   echo "no Kotlin changes vs $BASE"
 fi
