@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tunnelHostInput: EditText
     private lateinit var accSummary: TextView
     private lateinit var shotSummary: TextView
+    private val groupSwitches = mutableMapOf<ToolGroup, Switch>()
 
     private var updatingUi = false
 
@@ -164,6 +165,21 @@ class MainActivity : AppCompatActivity() {
         apiKeyInput.setText(prefs.apiKey)
         root.addView(accessCard)
         root.addView(hintText("Client gọi MCP phải gửi header EMUSE_API_KEY."))
+
+        // ---- section: Quyền tool ----
+        root.addView(sectionTitle("Quyền tool"))
+        val permCard = card()
+        for (g in ToolGroup.entries) {
+            val sw = switchRow(permCard, g.title, g.summary) { checked ->
+                prefs.setGroupEnabled(g, checked)
+                toast(if (checked) "Đã bật: ${g.title}" else "Đã tắt: ${g.title}")
+                refresh()
+            }
+            groupSwitches[g] = sw
+            if (g != ToolGroup.entries.last()) permCard.addView(divider())
+        }
+        root.addView(permCard)
+        root.addView(hintText("Tool bị chặn khi nhóm của nó tắt — kể cả khi tool_flags đang bật."))
 
         // ---- section: Cloudflare Tunnel ----
         root.addView(sectionTitle("Cloudflare Tunnel"))
@@ -455,6 +471,7 @@ class MainActivity : AppCompatActivity() {
                 setSwitch(serviceSwitch, MuseService.running)
                 setSwitch(overlaySwitch, prefs.overlayEnabled)
                 setSwitch(tunnelSwitch, prefs.tunnelEnabled)
+                for ((g, sw) in groupSwitches) setSwitch(sw, prefs.isGroupEnabled(g))
                 tunnelSummary.text = when {
                     prefs.tunnelUrl.isNotEmpty() -> prefs.tunnelUrl
                     prefs.tunnelEnabled -> "Đang tạo tunnel…"
