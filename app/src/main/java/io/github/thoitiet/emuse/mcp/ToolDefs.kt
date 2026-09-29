@@ -44,6 +44,12 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         true, false, true, false, "query", "device.info",
     ),
     ToolDef(
+        "get_current_context",
+        "Get the phone's current time, time zone, weekday, locale, and last known location. Call this when the task involves now, today, tomorrow, or the device's location. Location is included only when the app already holds a location permission.",
+        withDevice(""),
+        true, false, true, false, "query", "device.context",
+    ),
+    ToolDef(
         "shell_exec",
         "Execute a shell command on the device. Runs as the app user via 'sh -c' by default; set asRoot to run via 'su -c' when the device is rooted.",
         withDevice(
@@ -56,8 +62,12 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "app_list",
-        "List installed applications (package, label, system flag).",
-        withDevice("\"system\":{\"type\":\"boolean\",\"description\":\"Include system apps. Default false.\"}"),
+        "List installed applications (package, label, system flag). With query, fuzzy-searches by app name or package fragment instead (case- and diacritic-insensitive, e.g. 'fb' finds Facebook).",
+        withDevice(
+            "\"system\":{\"type\":\"boolean\",\"description\":\"Include system apps. Default false.\"}," +
+                "\"query\":{\"type\":\"string\",\"description\":\"Fuzzy app name/package fragment. Omit to list all apps.\"}," +
+                "\"limit\":{\"type\":\"number\",\"description\":\"Max results when query is given, 1 to 20. Default 10.\"}",
+        ),
         true, false, true, false, "query", "app.list",
     ),
     ToolDef(
@@ -89,14 +99,24 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "app_start",
-        "Launch an application: by package (its launcher intent) or by explicit action/uri with optional string extras.",
+        "Launch an application: by package (its launcher intent), by fuzzy app_name (resolved to a package; ambiguous names return candidates), or by explicit action/uri with optional string extras.",
         withDevice(
-            "\"package\":{\"type\":\"string\",\"description\":\"Application package name (used when action is omitted).\"}," +
+            "\"package\":{\"type\":\"string\",\"description\":\"Application package name (used when action is omitted). Takes precedence over app_name.\"}," +
+                "\"app_name\":{\"type\":\"string\",\"description\":\"App display name, fuzzy-matched (e.g. \\\"Facebook\\\"). Used when package is omitted.\"}," +
                 "\"action\":{\"type\":\"string\",\"description\":\"Intent action, e.g. android.intent.action.VIEW.\"}," +
                 "\"uri\":{\"type\":\"string\",\"description\":\"Intent data URI.\"}," +
                 "\"extras\":{\"type\":\"object\",\"description\":\"String extras to attach to the intent.\",\"additionalProperties\":{\"type\":\"string\"}}",
         ),
         false, false, false, false, "write", "app.start",
+    ),
+    ToolDef(
+        "open_uri",
+        "Open a URI with the system's ACTION_VIEW handler (browser, maps, deep links...). The URI must have a scheme and at least one app must resolve it.",
+        withDevice(
+            "\"uri\":{\"type\":\"string\",\"description\":\"URI to open, e.g. https://example.com or geo:0,0.\"}",
+            "\"uri\"",
+        ),
+        false, false, false, false, "write", "app.open_uri",
     ),
     ToolDef(
         "app_stop",
@@ -311,6 +331,16 @@ val TOOL_DEFS: List<ToolDef> = listOf(
                 "\"maxNodes\":{\"type\":\"number\",\"description\":\"Max elements to walk (1-2000). Default 500.\"}",
         ),
         true, false, true, false, "query", "ui.snapshot",
+    ),
+    ToolDef(
+        "observe_screen",
+        "Observe the current phone screen in ONE call: the Eta-style UI tree (observation_id + elements) plus, optionally, a screenshot. Returns {observation_id, ui_tree, screenshot?}; the screenshot is delivered as an image content block when include_screenshot is true.",
+        withDevice(
+            "\"include_screenshot\":{\"type\":\"boolean\",\"description\":\"Attach the current screen image. Default false. Enable when UI nodes are not enough (canvas/map/visual content).\"}," +
+                "\"include_ui_tree\":{\"type\":\"boolean\",\"description\":\"Include the accessibility UI tree. Default true.\"}," +
+                "\"max_nodes\":{\"type\":\"number\",\"description\":\"Max UI nodes in the tree (1-120). Default 60.\"}",
+        ),
+        true, false, true, false, "query", "ui.observe",
     ),
     ToolDef(
         "wait_for_text",

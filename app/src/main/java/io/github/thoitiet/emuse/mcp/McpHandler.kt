@@ -187,6 +187,27 @@ class McpHandler(
                             .put("height", shot.optInt("height")))),
                 )
             }
+            if (name == "observe_screen" && res.result is JSONObject) {
+                val r = res.result as JSONObject
+                val shot = r.optJSONObject("screenshot")
+                // Keep the base64 out of the text block; it goes in the
+                // image block below like screen_capture.
+                val textJson = JSONObject(r.toString())
+                textJson.optJSONObject("screenshot")?.remove("pngBase64")
+                val content = org.json.JSONArray()
+                    .put(JSONObject().put("type", "text").put("text", textJson.toString()))
+                if (shot != null) {
+                    content.put(JSONObject()
+                        .put("type", "image")
+                        .put("data", shot.optString("pngBase64", ""))
+                        .put("mimeType", "image/png"))
+                }
+                return HttpResult(
+                    200, rpcResult(id, JSONObject()
+                        .put("content", content)
+                        .put("structuredContent", textJson)),
+                )
+            }
             HttpResult(200, toolOk(id, res.result))
         } catch (e: Exception) {
             HttpResult(200, toolFailed(id, e.message ?: "Internal error"))

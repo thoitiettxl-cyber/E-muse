@@ -5,12 +5,14 @@ import org.json.JSONObject
 /** Command names for the on-device executor. */
 object Cmds {
     const val DEVICE_INFO = "device.info"
+    const val DEVICE_CONTEXT = "device.context"
     const val SHELL_EXEC = "shell.exec"
     const val APP_LIST = "app.list"
     const val APP_INFO = "app.info"
     const val APP_INSTALL = "app.install"
     const val APP_UNINSTALL = "app.uninstall"
     const val APP_START = "app.start"
+    const val APP_OPEN_URI = "app.open_uri"
     const val APP_STOP = "app.stop"
     const val FILE_LIST = "file.list"
     const val FILE_PULL = "file.pull"
@@ -34,6 +36,7 @@ object Cmds {
     const val CLIPBOARD_GET = "clipboard.get"
     const val UI_DUMP = "ui.dump"
     const val UI_SNAPSHOT = "ui.snapshot"
+    const val UI_OBSERVE = "ui.observe"
     const val UI_WAIT_TEXT = "ui.wait_text"
     const val UI_WAIT_PACKAGE = "ui.wait_package"
     const val INPUT_WAIT = "input.wait"

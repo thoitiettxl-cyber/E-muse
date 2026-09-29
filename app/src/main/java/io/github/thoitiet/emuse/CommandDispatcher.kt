@@ -64,7 +64,11 @@ class CommandDispatcher(
         val s = when (cmd.cmd) {
             Cmds.SHELL_EXEC -> a.optString("command")
             Cmds.APP_INFO, Cmds.APP_UNINSTALL, Cmds.APP_STOP -> a.optString("package")
-            Cmds.APP_START -> a.optString("package").ifEmpty { a.optString("action") }
+            Cmds.APP_LIST -> a.optString("query").ifEmpty { if (a.optBoolean("system", false)) "system" else "" }
+            Cmds.APP_START -> a.optString("package")
+                .ifEmpty { a.optString("app_name") }
+                .ifEmpty { a.optString("action") }
+            Cmds.APP_OPEN_URI -> a.optString("uri").take(40)
             Cmds.FILE_LIST, Cmds.FILE_PULL, Cmds.FILE_PUSH, Cmds.FILE_DELETE -> a.optString("path")
             Cmds.INPUT_TAP -> "(${a.optInt("x")}, ${a.optInt("y")})"
             Cmds.INPUT_TAP_AREA -> "(${a.optInt("x1")},${a.optInt("y1")})-(${a.optInt("x2")},${a.optInt("y2")})"
@@ -75,6 +79,8 @@ class CommandDispatcher(
             Cmds.INPUT_SCROLL_ELEMENT -> "element=${a.optString("elementId")} ${a.optString("direction")}"
             Cmds.UI_WAIT_TEXT -> a.optString("text").take(20)
             Cmds.UI_WAIT_PACKAGE -> a.optString("package_name")
+            Cmds.UI_OBSERVE -> "screenshot=${a.optBoolean("include_screenshot", false)}"
+            Cmds.DEVICE_CONTEXT -> ""
             Cmds.INPUT_WAIT -> "${a.optInt("durationMs", 1_000)}ms"
             Cmds.SYSTEM_PANEL -> a.optString("panel")
             Cmds.INPUT_TEXT -> a.optString("text").take(20)
@@ -96,13 +102,18 @@ class CommandDispatcher(
         val a = cmd.args
         return when (cmd.cmd) {
             Cmds.DEVICE_INFO -> deviceInfo()
+            Cmds.DEVICE_CONTEXT -> deviceContext()
             Cmds.SHELL_EXEC -> ShellExecutor.exec(
                 a.getString("command"),
                 a.optBoolean("asRoot", false),
                 a.optLong("timeoutMs", 30_000).coerceIn(1_000L, 120_000L),
             ).toJson()
 
-            Cmds.APP_LIST -> apps.list(a.optBoolean("system", false))
+            Cmds.APP_LIST -> apps.list(
+                a.optBoolean("system", false),
+                a.optString("query").ifEmpty { null },
+                a.optInt("limit", 10),
+            )
             Cmds.APP_INFO -> apps.info(a.getString("package"))
             Cmds.APP_INSTALL -> apps.install(a.getString("apkBase64"))
             Cmds.APP_UNINSTALL -> apps.uninstall(a.getString("package"))
@@ -111,7 +122,9 @@ class CommandDispatcher(
                 a.optString("action").ifEmpty { null },
                 a.optString("uri").ifEmpty { null },
                 a.optJSONObject("extras"),
+                a.optString("app_name").ifEmpty { null },
             )
+            Cmds.APP_OPEN_URI -> apps.openUri(a.getString("uri"))
             Cmds.APP_STOP -> apps.stop(a.getString("package"))
 
             Cmds.FILE_LIST -> files.list(a.getString("path"))
@@ -185,6 +198,11 @@ class CommandDispatcher(
                 compact = a.optBoolean("compact", false),
                 maxNodes = a.optInt("maxNodes", 500),
             )
+            Cmds.UI_OBSERVE -> observeScreen(
+                includeScreenshot = a.optBoolean("include_screenshot", false),
+                includeUiTree = a.optBoolean("include_ui_tree", true),
+                maxNodes = a.optInt("max_nodes", 60),
+            )
             Cmds.UI_WAIT_TEXT -> UiSnapshotter.waitForText(
                 a.getString("text"),
                 a.optLong("timeoutMs", 10_000L),
@@ -212,4 +230,74 @@ class CommandDispatcher(
         .put("root", ShellExecutor.hasRoot())
         .put("accessibility", MuseAccessibilityService.instance != null)
         .put("package", appCtx.packageName)
+
+    /**
+     * Eta's get_current_context: current time, time zone, weekday, locale,
+     * plus last-known location when the app already holds a location
+     * permission (no new manifest permission is requested here).
+     */
+    private fun deviceContext(): JSONObject {
+        val now = java.time.ZonedDateTime.now()
+            .truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
+        return JSONObject()
+            .put("datetime", now.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+            .put("timezone", now.zone.id)
+            .put(
+                "weekday",
+                now.dayOfWeek.getDisplayName(
+                    java.time.format.TextStyle.FULL,
+                    java.util.Locale.ENGLISH,
+                ),
+            )
+            .put("locale", java.util.Locale.getDefault().toLanguageTag())
+            .put("location", lastKnownLocation())
+    }
+
+    private fun lastKnownLocation(): JSONObject {
+        val fine = appCtx.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        val coarse = appCtx.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!fine && !coarse) {
+            return JSONObject().put("status", "location_permission_required")
+        }
+        val lm = appCtx.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        var best: android.location.Location? = null
+        for (provider in runCatching { lm.getProviders(true) }.getOrNull().orEmpty()) {
+            val loc = runCatching { lm.getLastKnownLocation(provider) }.getOrNull() ?: continue
+            if (best == null || loc.time > best.time) best = loc
+        }
+        val b = best ?: return JSONObject().put("status", "location_unavailable")
+        fun round5(v: Double): Double = kotlin.math.round(v * 100_000.0) / 100_000.0
+        return JSONObject()
+            .put("latitude", round5(b.latitude))
+            .put("longitude", round5(b.longitude))
+            .put("accuracy_m", if (b.hasAccuracy()) b.accuracy.toInt() else JSONObject.NULL)
+            .put("age_s", (System.currentTimeMillis() - b.time) / 1_000L)
+    }
+
+    /**
+     * Eta's observe_screen: one call returning the Eta-style UI tree
+     * (ui_snapshot) and/or a screenshot, per flags. Reuses the existing
+     * executors; McpHandler attaches the screenshot as an image content
+     * block when present.
+     */
+    private fun observeScreen(
+        includeScreenshot: Boolean,
+        includeUiTree: Boolean,
+        maxNodes: Int,
+    ): JSONObject {
+        val out = JSONObject()
+        if (includeUiTree) {
+            val snap = UiSnapshotter.snapshot(maxNodes = maxNodes.coerceIn(1, 120))
+            out.put("observation_id", snap.optString("observation_id"))
+            out.put("ui_tree", snap)
+        } else {
+            out.put("observation_id", UiSnapshotter.latestObservationId())
+        }
+        if (includeScreenshot) {
+            out.put("screenshot", ScreenExecutor.capture())
+        }
+        return out
+    }
 }
