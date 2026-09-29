@@ -1,4 +1,4 @@
-# MCP Tools E-Muse (67)
+# MCP Tools E-Muse (70)
 
 Mọi tool (trừ `device_list`, `tool_flags`) đều có `deviceId` optional —
 bắt buộc khi có nhiều máy cùng kết nối.
@@ -71,6 +71,9 @@ bắt buộc khi có nhiều máy cùng kết nối.
 | `get_logcat` | query | - | Logcat `-d -v threadtime` qua root (max_lines 20–500). Không cần manifest permission |
 | `get_setting` | query | - | Đọc 1 setting (namespace system/secure/global), fallback root `settings get` khi public API trả null |
 | `get_device_environment` | query | - | Môi trường máy: interactive/locked, ringer mode, DND filter, audio outputs, số display. Không cần permission |
+| `set_setting` | write | Đổi 1 setting (namespace system/secure/global) qua root `settings put` — root-only, không cần manifest permission |
+| `set_device_state` | write | Bật/tắt Wi-Fi hoặc Bluetooth qua root (`cmd wifi`/`cmd bluetooth_manager`) — root-only |
+| `app_state_control` | write | Force-stop / freeze (`pm disable-user`) / unfreeze (`pm enable`) app theo package name — root-only |
 | `tool_flags` | query | - | **Xem/bật/tắt tool** — luôn khả dụng, không tắt được chính nó |
 
 Mỗi `ui_snapshot` trả `observation_id` (tăng đơn điệu: `o1`, `o2`, ...).
@@ -112,7 +115,7 @@ Hai nhóm nhạy cảm mặc định TẮT; bật trong app (mục "Quyền tool
 | `terminal_file` | Bật | `shell_exec`, `file_list`, `file_pull`, `file_push`, `file_delete` |
 | `device_direct` | Bật | `device_list`, `device_info`, `device_status`, `network_info`, `get_volume`, `set_volume`, `media_control`, `set_alarm`, `set_timer`, `list_alarms`, `top_memory_apps`, `top_storage_apps`, `app_list`, `app_info`, `wait`, `wait_for_text`, `wait_for_package` |
 | `sensitive_read` | Tắt | `get_current_context`, `set_clipboard`, `get_clipboard`, `screen_capture`, `ui_dump`, `ui_snapshot`, `observe_screen`, `search_contacts`, `search_call_history`, `search_messages`, `search_calendar_events`, `search_media`, `search_audio`, `search_recordings`, `search_files`, `search_downloads`, `get_current_location`, `recent_app_activity`, `app_usage_summary`, `recent_notifications`, `wifi_credentials`, `read_sms_code`, `get_logcat`, `get_setting`, `get_device_environment` |
-| `sensitive_action` | Tắt | `app_install`, `app_uninstall`, `app_start`, `app_stop`, `open_uri`, `input_tap`, `tap_and_observe`, `input_swipe`, `tap_area`, `long_press`, `long_press_element`, `scroll`, `scroll_element`, `input_key`, `input_text`, `replace_text`, `clear_text`, `paste_text`, `open_system_panel` |
+| `sensitive_action` | Tắt | `app_install`, `app_uninstall`, `app_start`, `app_stop`, `open_uri`, `input_tap`, `tap_and_observe`, `input_swipe`, `tap_area`, `long_press`, `long_press_element`, `scroll`, `scroll_element`, `input_key`, `input_text`, `replace_text`, `clear_text`, `paste_text`, `open_system_panel`, `set_setting`, `set_device_state`, `app_state_control` |
 
 Tool chưa gán nhóm (không nên xảy ra) bị chặn mặc định (fail-closed).
 
@@ -138,6 +141,9 @@ Tool thiếu runtime permission **không tự xin giữa MCP call** — trả l�
 | `get_logcat` | (không) — root `logcat -d` (`READ_LOGS` là signature permission, không dùng) | root-only |
 | `get_setting` | (không) — public Settings API + root `settings get` fallback | không cần permission đọc mới |
 | `get_device_environment` | (không) — `AudioManager`/`PowerManager`/`KeyguardManager`/`NotificationManager`/`DisplayManager` API thông thường | không cần permission mới |
+| `set_setting` | (không) — root `settings put` | root-only |
+| `set_device_state` | (không) — root `cmd wifi` / `cmd bluetooth_manager` | root-only |
+| `app_state_control` | (không) — root `am`/`pm` + `getApplicationInfo` (`QUERY_ALL_PACKAGES` đã có) | root-only |
 
 Defer sang P7: các tool đọc private provider của ColorOS (notes, recordings,
 memories) và private health database — cần OEM provider, không port bằng

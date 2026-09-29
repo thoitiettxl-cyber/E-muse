@@ -90,7 +90,7 @@ curl -s https://<tunnel-url-của-bạn>/health
 # {"ok":true,"mode":"direct"}
 ```
 
-## Danh sách tools (67)
+## Danh sách tools (70)
 
 | Tool | Loại | Mô tả |
 |---|---|---|
@@ -160,6 +160,9 @@ curl -s https://<tunnel-url-của-bạn>/health
 | `get_logcat` | query | Đọc logcat (cần root) |
 | `get_setting` | query | Đọc setting system/secure/global |
 | `get_device_environment` | query | Màn hình/khóa, ringer, DND, audio output, display |
+| `set_setting` | write | Đổi setting system/secure/global (cần root) |
+| `set_device_state` | write | Bật/tắt Wi-Fi hoặc Bluetooth (cần root) |
+| `app_state_control` | write | Force-stop / freeze / unfreeze app (cần root) |
 | `tool_flags` | query | Bật/tắt từng tool (không bao giờ bị tắt) |
 
 Mọi tool (trừ `device_list`) nhận `deviceId` tùy chọn — bỏ trống khi chỉ có
