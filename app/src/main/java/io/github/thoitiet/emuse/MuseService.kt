@@ -1,0 +1,171 @@
+package io.github.thoitiet.emuse
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
+import android.os.IBinder
+import android.provider.Settings
+import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
+import kotlin.math.min
+
+class MuseService : Service() {
+    companion object {
+        const val ACTION_STOP = "io.github.thoitiet.emuse.ACTION_STOP"
+
+        @Volatile
+        var running: Boolean = false
+            private set
+    }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private lateinit var client: OkHttpClient
+    private lateinit var dispatcher: CommandDispatcher
+    private var ws: WebSocket? = null
+    private var reconnectDelayMs = 5000L
+
+    override fun onCreate() {
+        super.onCreate()
+        createChannel()
+        startForegroundX(buildNotification("E-Muse đang khởi động…"))
+        dispatcher = CommandDispatcher(this, ::sendResult)
+        client = OkHttpClient.Builder()
+            .pingInterval(20, TimeUnit.SECONDS)
+            .build()
+        running = true
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        connect()
+        return START_STICKY
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        running = false
+        scope.cancel()
+        try {
+            ws?.close(1000, "service stopped")
+        } catch (_: Exception) {
+        }
+        try {
+            client.dispatcher.executorService.shutdown()
+        } catch (_: Exception) {
+        }
+        super.onDestroy()
+    }
+
+    private fun connect() {
+        val prefs = Prefs(this)
+        val httpUrl = prefs.workerUrl.trim().trimEnd('/')
+        val token = prefs.apiKey.trim()
+        if (httpUrl.isEmpty() || token.isEmpty()) {
+            updateNotification("E-Muse: chưa cấu hình URL / API key")
+            return
+        }
+        // https:// -> wss://, http:// -> ws://
+        val wsUrl = httpUrl.replaceFirst("^http".toRegex(), "ws")
+        updateNotification("E-Muse: đang kết nối…")
+        val request = Request.Builder().url(wsUrl).build()
+        ws = client.newWebSocket(request, listener)
+    }
+
+    private val listener = object : WebSocketListener() {
+        override fun onOpen(webSocket: WebSocket, response: Response) {
+            reconnectDelayMs = 5000L
+            val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
+            val hello = JSONObject()
+                .put("type", "hello")
+                .put("deviceId", deviceId)
+                .put("deviceName", Build.MODEL ?: "android")
+                .put("token", Prefs(this@MuseService).apiKey.trim())
+            webSocket.send(hello.toString())
+            updateNotification("E-Muse: đã kết nối • $deviceId")
+        }
+
+        override fun onMessage(webSocket: WebSocket, text: String) {
+            try {
+                val o = JSONObject(text)
+                if (o.has("cmd")) dispatcher.dispatch(DeviceCommand.fromJson(o))
+            } catch (_: Exception) {
+            }
+        }
+
+        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            scheduleReconnect()
+        }
+
+        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            updateNotification("E-Muse: mất kết nối, thử lại…")
+            scheduleReconnect()
+        }
+    }
+
+    private fun scheduleReconnect() {
+        if (!running) return
+        scope.launch {
+            delay(reconnectDelayMs)
+            reconnectDelayMs = min(reconnectDelayMs * 2, 60_000L)
+            if (running) connect()
+        }
+    }
+
+    private fun sendResult(result: DeviceResult) {
+        try {
+            ws?.send(result.toJson().toString())
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun createChannel() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            val mgr = getSystemService(NotificationManager::class.java)
+            mgr.createNotificationChannel(
+                NotificationChannel("emuse", "E-Muse", NotificationManager.IMPORTANCE_LOW),
+            )
+        }
+    }
+
+    private fun buildNotification(text: String): Notification =
+        NotificationCompat.Builder(this, "emuse")
+            .setContentTitle("E-Muse")
+            .setContentText(text)
+            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+            .setOngoing(true)
+            .build()
+
+    private fun startForegroundX(n: Notification) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        } else {
+            @Suppress("DEPRECATION")
+            startForeground(1, n)
+        }
+    }
+
+    private fun updateNotification(text: String) {
+        val mgr = getSystemService(NotificationManager::class.java)
+        mgr.notify(1, buildNotification(text))
+    }
+}

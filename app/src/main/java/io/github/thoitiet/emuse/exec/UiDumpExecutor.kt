@@ -1,0 +1,59 @@
+package io.github.thoitiet.emuse.exec
+
+import android.graphics.Rect
+import android.view.accessibility.AccessibilityNodeInfo
+import io.github.thoitiet.emuse.MuseAccessibilityService
+import org.json.JSONArray
+import org.json.JSONObject
+
+object UiDumpExecutor {
+    private const val MAX_DEPTH = 10
+    private const val MAX_NODES = 2000
+    private var count = 0
+
+    fun dump(): JSONObject {
+        val svc = MuseAccessibilityService.instance
+        if (svc != null) {
+            val root = svc.rootInActiveWindow ?: throw IllegalStateException("no active window")
+            count = 0
+            try {
+                return JSONObject()
+                    .put("via", "accessibility")
+                    .put("root", nodeToJson(root, 0))
+            } finally {
+                root.recycle()
+            }
+        }
+        if (ShellExecutor.hasRoot()) {
+            val tmp = "/data/local/tmp/emuse_uidump.xml"
+            val r = ShellExecutor.exec("uiautomator dump $tmp && base64 $tmp; rm -f $tmp", asRoot = true)
+            val b64 = r.stdout.filter { !it.isWhitespace() }
+            if (r.exitCode == 0 && b64.isNotEmpty()) {
+                return JSONObject().put("via", "uiautomator").put("xmlBase64", b64)
+            }
+        }
+        throw IllegalStateException("ui.dump unavailable: enable the accessibility service or grant root")
+    }
+
+    private fun nodeToJson(n: AccessibilityNodeInfo, depth: Int): JSONObject {
+        val o = JSONObject()
+        val b = Rect()
+        n.getBoundsInScreen(b)
+        o.put("class", n.className?.toString() ?: "")
+        o.put("text", n.text?.toString() ?: "")
+        o.put("contentDesc", n.contentDescription?.toString() ?: "")
+        o.put("bounds", JSONArray().put(b.left).put(b.top).put(b.right).put(b.bottom))
+        o.put("clickable", n.isClickable)
+        if (depth < MAX_DEPTH && count < MAX_NODES) {
+            val kids = JSONArray()
+            for (i in 0 until n.childCount) {
+                val c = n.getChild(i) ?: continue
+                count++
+                kids.put(nodeToJson(c, depth + 1))
+                c.recycle()
+            }
+            o.put("children", kids)
+        }
+        return o
+    }
+}

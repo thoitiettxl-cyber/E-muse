@@ -1,0 +1,1 @@
+{"mcpServers":{"E-muse":{"headers":{"EMUSE_API_KEY":"${EMUSE_API_KEY}"},"protocolVersion":"2026-07-28","url":"https://e-muse-mcp.<account>.workers.dev/mcp"}}}
