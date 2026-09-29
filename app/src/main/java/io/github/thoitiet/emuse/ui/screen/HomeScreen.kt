@@ -146,7 +146,7 @@ private fun StatusRow(label: String, value: String, ok: Boolean) {
     ) {
         Text(
             text = label,
-            color = MiuixTheme.colorScheme.onSurfaceVariant,
+            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
         )
         Text(
             text = value,

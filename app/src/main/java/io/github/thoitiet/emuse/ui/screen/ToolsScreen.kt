@@ -113,7 +113,7 @@ fun ToolsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
         }
         item(key = "spacer") {
@@ -153,7 +153,7 @@ private fun ToolCard(name: String, color: Color, modifier: Modifier = Modifier) 
                 text = viDesc(name),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
-                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
                 modifier = Modifier.padding(top = 4.dp),
             )
         }

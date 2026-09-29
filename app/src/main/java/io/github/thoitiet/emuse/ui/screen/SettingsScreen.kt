@@ -87,11 +87,10 @@ fun SettingsScreen(
                     TextField(
                         state = apiKeyState,
                         modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = PasswordVisualTransformation(),
                     )
                     Text(
                         text = "EMUSE_API_KEY — guard cho MCP endpoint",
-                        color = MiuixTheme.colorScheme.onSurfaceVariant,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantActions,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -103,7 +102,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
         }
 
@@ -151,11 +150,10 @@ fun SettingsScreen(
                         TextField(
                             state = tunnelTokenState,
                             modifier = Modifier.fillMaxWidth(),
-                            visualTransformation = PasswordVisualTransformation(),
                         )
                         Text(
                             text = "Named tunnel token (trống = Quick Tunnel)",
-                            color = MiuixTheme.colorScheme.onSurfaceVariant,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
                             modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
                         )
                         Text(
@@ -168,7 +166,7 @@ fun SettingsScreen(
                         )
                         Text(
                             text = "vd mcp.example.com",
-                            color = MiuixTheme.colorScheme.onSurfaceVariant,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     }
@@ -181,7 +179,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
         }
         item(key = "spacer") {

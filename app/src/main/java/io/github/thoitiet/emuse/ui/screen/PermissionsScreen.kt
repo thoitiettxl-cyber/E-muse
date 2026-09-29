@@ -69,9 +69,9 @@ fun PermissionsScreen(
                             onClick = { onRowClick(row.key) },
                         )
                         if (i != appPerms.lastIndex) {
-                            androidx.compose.material.Divider(
+                            androidx.compose.material3.HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MiuixTheme.colorScheme.divider,
+                                color = MiuixTheme.colorScheme.outline,
                             )
                         }
                     }
@@ -96,9 +96,9 @@ fun PermissionsScreen(
                             onClick = { onRowClick(row.key) },
                         )
                         if (i != sysPerms.lastIndex) {
-                            androidx.compose.material.Divider(
+                            androidx.compose.material3.HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MiuixTheme.colorScheme.divider,
+                                color = MiuixTheme.colorScheme.outline,
                             )
                         }
                     }
@@ -126,7 +126,7 @@ fun PermissionsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
         }
         item(key = "spacer") {
@@ -156,7 +156,7 @@ private fun PermRow(row: PermRowState, onClick: (() -> Unit)?) {
             Text(text = row.title)
             Text(
                 text = row.subtitle,
-                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
         }
         Text(
@@ -167,7 +167,7 @@ private fun PermRow(row: PermRowState, onClick: (() -> Unit)?) {
         if (onClick != null) {
             Text(
                 text = "›",
-                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
         }
     }
