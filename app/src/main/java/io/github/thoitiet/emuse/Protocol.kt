@@ -51,6 +51,26 @@ object Cmds {
     const val ALARM_LIST = "alarm.list"
     const val MEMORY_TOP_APPS = "memory.top_apps"
     const val STORAGE_TOP_APPS = "storage.top_apps"
+
+    // P5: Eta-parity sensitive-read tools
+    const val CONTACTS_SEARCH = "contacts.search"
+    const val CALLLOG_SEARCH = "calllog.search"
+    const val SMS_SEARCH = "sms.search"
+    const val CALENDAR_SEARCH = "calendar.search"
+    const val MEDIA_SEARCH = "media.search"
+    const val AUDIO_SEARCH = "audio.search"
+    const val RECORDINGS_SEARCH = "recordings.search"
+    const val FILES_SEARCH = "files.search"
+    const val DOWNLOADS_SEARCH = "downloads.search"
+    const val LOCATION_GET = "location.get"
+    const val APP_ACTIVITY_RECENT = "app.activity.recent"
+    const val APP_USAGE_SUMMARY = "app.usage.summary"
+    const val NOTIFICATIONS_RECENT = "notifications.recent"
+    const val WIFI_CREDENTIALS = "wifi.credentials"
+    const val SMS_CODE_READ = "sms.code.read"
+    const val LOGCAT_GET = "logcat.get"
+    const val SETTING_GET = "setting.get"
+    const val DEVICE_ENVIRONMENT = "device.environment"
 }
 
 data class DeviceCommand(val id: String, val cmd: String, val args: JSONObject) {

@@ -131,6 +131,166 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         ),
         true, false, true, false, "query", "storage.top_apps",
     ),
+
+    // P5: Eta-parity sensitive-read tools. All require the user to have
+    // granted the relevant permission in Android Settings; the tool fails
+    // with a clear PERMISSION_REQUIRED error otherwise.
+    ToolDef(
+        "search_contacts",
+        "Search contacts by name (display name, lookup key, phone flag, last update). Needs READ_CONTACTS.",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"Name fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "contacts.search",
+    ),
+    ToolDef(
+        "search_call_history",
+        "Search call history by number or name (date, duration, type, geocoded location). Needs READ_CALL_LOG.",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"Number or name fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "calllog.search",
+    ),
+    ToolDef(
+        "search_messages",
+        "Search SMS messages by address or body (date, type, read flag). Needs READ_SMS.",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"Address or body fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "sms.search",
+    ),
+    ToolDef(
+        "search_calendar_events",
+        "Search calendar events by title, description or location (start/end, all-day, calendar). Needs READ_CALENDAR.",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"Title, description or location fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "calendar.search",
+    ),
+    ToolDef(
+        "search_media",
+        "Search photos and videos in MediaStore by file name or path (mime type, date, size). Needs READ_MEDIA_IMAGES/READ_MEDIA_VIDEO (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"File name or path fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "media.search",
+    ),
+    ToolDef(
+        "search_audio",
+        "Search audio files in MediaStore by title, artist or path (album, duration, size). Needs READ_MEDIA_AUDIO (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"Title, artist or path fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "audio.search",
+    ),
+    ToolDef(
+        "search_recordings",
+        "Search call/voice recordings in MediaStore by title or path (album, duration, size). Same as search_audio plus a 'Record*' path filter. Needs READ_MEDIA_AUDIO (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"Title or path fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "recordings.search",
+    ),
+    ToolDef(
+        "search_files",
+        "Search generic documents/other files in MediaStore by file name or path (mime type, size). Needs a READ_MEDIA_* permission (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"File name or path fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "files.search",
+    ),
+    ToolDef(
+        "search_downloads",
+        "Search files in the Downloads collection by file name or path (mime type, size). API 29+. Needs a READ_MEDIA_* permission (API 33+) or READ_EXTERNAL_STORAGE (API 32 and below).",
+        withDevice(
+            "\"query\":{ \"type\":\"string\",\"description\":\"File name or path fragment. Omit to list all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "downloads.search",
+    ),
+    ToolDef(
+        "get_current_location",
+        "Get the current/last-known device location (latitude, longitude rounded to ~10m, accuracy_m, age_s). Needs ACCESS_FINE_LOCATION (or ACCESS_COARSE_LOCATION).",
+        withDevice(""),
+        true, false, true, false, "query", "location.get",
+    ),
+    ToolDef(
+        "recent_app_activity",
+        "List recently foregrounded apps (package, app name, activity, resumed_at), newest first. Needs Usage access (Settings -> Special app access -> Usage access).",
+        withDevice(
+            "\"package_name\":{ \"type\":\"string\",\"description\":\"Filter to one package. Omit for all.\"}," +
+                "\"max_age_hours\":{ \"type\":\"number\",\"description\":\"Look-back window, 1 to 168 hours. Default 24.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+        ),
+        true, false, true, false, "query", "app.activity.recent",
+    ),
+    ToolDef(
+        "app_usage_summary",
+        "Summarize foreground time per app (foreground_ms, last_used_at), most-used first. Needs Usage access (Settings -> Special app access -> Usage access).",
+        withDevice(
+            "\"max_age_hours\":{ \"type\":\"number\",\"description\":\"Look-back window, 1 to 168 hours. Default 24.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+        ),
+        true, false, true, false, "query", "app.usage.summary",
+    ),
+    ToolDef(
+        "recent_notifications",
+        "List active notifications (package, title, text) via root 'cmd notification'. Needs root; no manifest permission required.",
+        withDevice(
+            "\"package_name\":{ \"type\":\"string\",\"description\":\"Filter to one package. Omit for all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 20. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "notifications.recent",
+    ),
+    ToolDef(
+        "wifi_credentials",
+        "List saved Wi-Fi networks (ssid, password) from WifiConfigStore.xml via root. Needs root; no manifest permission required. Omit ssid to list all.",
+        withDevice(
+            "\"ssid\":{ \"type\":\"string\",\"description\":\"Filter to one SSID. Omit for all.\"}," +
+                "\"limit\":{ \"type\":\"number\",\"description\":\"Max results, 1 to 50. Default 20.\"}",
+        ),
+        true, false, true, false, "query", "wifi.credentials",
+    ),
+    ToolDef(
+        "read_sms_code",
+        "Extract recent one-time verification codes from incoming SMS (code, sender, timestamp_ms), matching against OTP/verification-code keywords. Needs READ_SMS.",
+        withDevice(
+            "\"max_age_minutes\":{ \"type\":\"number\",\"description\":\"Look-back window, 1 to 1440 minutes. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "sms.code.read",
+    ),
+    ToolDef(
+        "get_logcat",
+        "Read device logs (logcat -d -v threadtime) via root, newest lines first. Needs root; no manifest permission required.",
+        withDevice(
+            "\"max_lines\":{ \"type\":\"number\",\"description\":\"Max log lines, 20 to 500. Default 200.\"}," +
+                "\"query\":{ \"type\":\"string\",\"description\":\"Case-insensitive filter. Omit for all.\"}",
+        ),
+        true, false, true, false, "query", "logcat.get",
+    ),
+    ToolDef(
+        "get_setting",
+        "Read one Android system setting (system|secure|global namespace), e.g. screen_brightness, android_id, adb_enabled. Falls back to root 'settings get' when the public API returns null.",
+        withDevice(
+            "\"namespace\":{ \"type\":\"string\",\"description\":\"system, secure or global.\"}," +
+                "\"key\":{ \"type\":\"string\",\"description\":\"Setting key, e.g. screen_brightness.\"}",
+        ),
+        true, false, true, false, "query", "setting.get",
+    ),
+    ToolDef(
+        "get_device_environment",
+        "Get device environment: screen interactive/locked, ringer mode, Do-Not-Disturb filter, audio outputs, display count. No permission required.",
+        withDevice(""),
+        true, false, true, false, "query", "device.environment",
+    ),
     ToolDef(
         "shell_exec",
         "Execute a shell command on the device. Runs as the app user via 'sh -c' by default; set asRoot to run via 'su -c' when the device is rooted.",

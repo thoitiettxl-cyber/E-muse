@@ -32,6 +32,7 @@ class CommandDispatcher(
     private val files = FileExecutor(appCtx)
     private val clipboard = ClipboardExecutor(appCtx)
     private val device = DeviceExecutor(appCtx)
+    private val sensitiveRead = SensitiveReadExecutor(appCtx)
 
     init {
         ShellExecutor.reset()
@@ -102,6 +103,26 @@ class CommandDispatcher(
             Cmds.ALARM_LIST -> ""
             Cmds.MEMORY_TOP_APPS -> "n=${a.optInt("limit", 10)}"
             Cmds.STORAGE_TOP_APPS -> "n=${a.optInt("limit", 10)}"
+
+            // P5 sensitive-read
+            Cmds.CONTACTS_SEARCH,
+            Cmds.CALLLOG_SEARCH,
+            Cmds.SMS_SEARCH,
+            Cmds.CALENDAR_SEARCH,
+            Cmds.MEDIA_SEARCH,
+            Cmds.AUDIO_SEARCH,
+            Cmds.RECORDINGS_SEARCH,
+            Cmds.FILES_SEARCH,
+            Cmds.DOWNLOADS_SEARCH -> "q=${a.optString("query", "")}"
+            Cmds.LOCATION_GET -> ""
+            Cmds.APP_ACTIVITY_RECENT,
+            Cmds.APP_USAGE_SUMMARY -> "age=${a.optInt("max_age_hours", 24)}h n=${a.optInt("limit", 20)}"
+            Cmds.NOTIFICATIONS_RECENT -> "pkg=${a.optString("package_name", "")} n=${a.optInt("limit", 10)}"
+            Cmds.WIFI_CREDENTIALS -> "ssid=${a.optString("ssid", "")} n=${a.optInt("limit", 20)}"
+            Cmds.SMS_CODE_READ -> "age=${a.optInt("max_age_minutes", 10)}m"
+            Cmds.LOGCAT_GET -> "n=${a.optInt("max_lines", 200)} q=${a.optString("query", "")}"
+            Cmds.SETTING_GET -> "${a.optString("namespace", "")}.${a.optString("key", "")}"
+            Cmds.DEVICE_ENVIRONMENT -> ""
             Cmds.INPUT_WAIT -> "${a.optInt("durationMs", 1_000)}ms"
             Cmds.SYSTEM_PANEL -> a.optString("panel")
             Cmds.INPUT_TEXT -> a.optString("text").take(20)
@@ -259,6 +280,26 @@ class CommandDispatcher(
             Cmds.ALARM_LIST -> device.listAlarms()
             Cmds.MEMORY_TOP_APPS -> device.topMemoryApps(a.optInt("limit", 10))
             Cmds.STORAGE_TOP_APPS -> device.topStorageApps(a.optInt("limit", 10))
+
+            // P5: Eta-parity sensitive-read tools
+            Cmds.CONTACTS_SEARCH -> sensitiveRead.searchContacts(a)
+            Cmds.CALLLOG_SEARCH -> sensitiveRead.searchCallHistory(a)
+            Cmds.SMS_SEARCH -> sensitiveRead.searchMessages(a)
+            Cmds.CALENDAR_SEARCH -> sensitiveRead.searchCalendarEvents(a)
+            Cmds.MEDIA_SEARCH -> sensitiveRead.searchMedia(a)
+            Cmds.AUDIO_SEARCH -> sensitiveRead.searchAudio(a, recordingsOnly = false, tool = "search_audio")
+            Cmds.RECORDINGS_SEARCH -> sensitiveRead.searchAudio(a, recordingsOnly = true, tool = "search_recordings")
+            Cmds.FILES_SEARCH -> sensitiveRead.searchFiles(a)
+            Cmds.DOWNLOADS_SEARCH -> sensitiveRead.searchDownloads(a)
+            Cmds.LOCATION_GET -> sensitiveRead.getCurrentLocation(a)
+            Cmds.APP_ACTIVITY_RECENT -> sensitiveRead.recentAppActivity(a)
+            Cmds.APP_USAGE_SUMMARY -> sensitiveRead.appUsageSummary(a)
+            Cmds.NOTIFICATIONS_RECENT -> sensitiveRead.recentNotifications(a)
+            Cmds.WIFI_CREDENTIALS -> sensitiveRead.wifiCredentials(a)
+            Cmds.SMS_CODE_READ -> sensitiveRead.readSmsCode(a)
+            Cmds.LOGCAT_GET -> sensitiveRead.getLogcat(a)
+            Cmds.SETTING_GET -> sensitiveRead.getSetting(a)
+            Cmds.DEVICE_ENVIRONMENT -> sensitiveRead.getDeviceEnvironment(a)
 
             else -> throw IllegalArgumentException("unknown cmd: ${cmd.cmd}")
         }
