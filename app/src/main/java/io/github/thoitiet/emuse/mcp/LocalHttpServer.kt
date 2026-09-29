@@ -55,7 +55,7 @@ class LocalHttpServer(
         }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val semaphore = Semaphore(MAX_CONNECTIONS)
     private var server: ServerSocket? = null
 
@@ -65,6 +65,9 @@ class LocalHttpServer(
 
     fun start() {
         if (started) return
+        // stop() cancels the scope, so a fresh one is needed on every start;
+        // otherwise the accept loop would never run on a reused instance.
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val s = ServerSocket(port, 50, java.net.InetAddress.getByName("127.0.0.1"))
         server = s
         started = true
