@@ -232,8 +232,8 @@ object UiSnapshotter {
         val action = when (dir) {
             "down" -> AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
             "up" -> AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
-            "left" -> AccessibilityNodeInfo.ACTION_SCROLL_LEFT
-            "right" -> AccessibilityNodeInfo.ACTION_SCROLL_RIGHT
+            "left" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id
+            "right" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id
             else -> throw IllegalArgumentException("direction must be up/down/left/right")
         }
         val node = cache[id]
