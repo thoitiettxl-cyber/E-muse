@@ -34,6 +34,24 @@ class Prefs(ctx: Context) {
         get() = sp.getString("tunnel_hostname", "") ?: ""
         set(v) = sp.edit().putString("tunnel_hostname", v).apply()
 
+    /**
+     * SHA-256 pin của cloudflared binary — trust-on-first-use: lần đầu gặp
+     * binary (sau khi Boss xác nhận file đúng) thì lưu hash; các lần sau
+     * hash khác -> TunnelManager fail-closed, từ chối chạy. Xóa file
+     * cloudflared trong app filesDir (hoặc clear app data) để pin lại.
+     */
+    var cloudflaredSha256: String
+        get() = sp.getString("cloudflared_sha256", "") ?: ""
+        set(v) = sp.edit().putString("cloudflared_sha256", v).apply()
+
+    /**
+     * SHA-256 pin của CA bundle (cacert.pem). Re-pin mỗi lần tải lại vì
+     * file xoay vòng theo curl.se — khác với binary (fail-closed).
+     */
+    var caBundleSha256: String
+        get() = sp.getString("cabundle_sha256", "") ?: ""
+        set(v) = sp.edit().putString("cabundle_sha256", v).apply()
+
     /** Local MCP server port (localhost only). */
     var mcpPort: Int
         get() = sp.getInt("mcp_port", 18789)
