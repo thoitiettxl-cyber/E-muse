@@ -48,7 +48,7 @@ jobs:
           log-accepted-android-sdk-licenses: false
 
       - name: Install Android SDK 37
-        run: sdkmanager "platforms;android-37" "build-tools;35.0.0" "platform-tools"
+        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "platform-tools"
 
       - name: Verify phase wiring
         run: |
