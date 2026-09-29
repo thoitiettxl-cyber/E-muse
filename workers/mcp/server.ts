@@ -52,11 +52,18 @@ const rpcResult = (id: unknown, result: Record<string, unknown>) =>
     },
   });
 
-const toolOk = (id: unknown, result: unknown) =>
-  rpcResult(id, {
+const toolOk = (id: unknown, result: unknown) => {
+  // MCP spec: structuredContent must be an object. Wrap arrays/primitives so
+  // strict clients (pydantic validation) don't reject the response.
+  const structured =
+    result !== null && typeof result === "object" && !Array.isArray(result)
+      ? result
+      : { value: result };
+  return rpcResult(id, {
     content: [{ type: "text", text: JSON.stringify(result) }],
-    structuredContent: result,
+    structuredContent: structured,
   });
+};
 
 const toolFailed = (id: unknown, message: string) =>
   rpcResult(id, {
