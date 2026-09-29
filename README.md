@@ -90,7 +90,7 @@ curl -s https://<tunnel-url-của-bạn>/health
 # {"ok":true,"mode":"direct"}
 ```
 
-## Danh sách tools (70)
+## Danh sách tools (77)
 
 | Tool | Loại | Mô tả |
 |---|---|---|
@@ -103,7 +103,8 @@ curl -s https://<tunnel-url-của-bạn>/health
 | `media_control` | write | Phím media (play/pause/next/previous/stop) |
 | `set_alarm` | write | Đặt báo thức hệ thống |
 | `set_timer` | write | Đặt timer hệ thống |
-| `list_alarms` | query | Báo thức hệ thống kế tiếp |
+| `list_alarms` | query | Full listing báo thức từ DB ColorOS clock app (fallback: báo thức kế tiếp) |
+| `list_active_timers` | query | Timer đang chạy từ DB ColorOS clock app (cần root) |
 | `top_memory_apps` | query | Process tốn RAM nhất |
 | `top_storage_apps` | query | App tốn bộ nhớ nhất (cần root) |
 | `get_current_context` | query | Giờ, timezone, weekday, locale, last-known location |
@@ -160,6 +161,12 @@ curl -s https://<tunnel-url-của-bạn>/health
 | `get_logcat` | query | Đọc logcat (cần root) |
 | `get_setting` | query | Đọc setting system/secure/global |
 | `get_device_environment` | query | Màn hình/khóa, ringer, DND, audio output, display |
+| `search_coloros_notes` | query | Ghi chú & to-do ColorOS (cần root) |
+| `search_coloros_recordings` | query | Ghi âm ColorOS (cần root) |
+| `search_recording_summaries` | query | Tóm tắt phiên âm ghi âm ColorOS (cần root) |
+| `search_coloros_memories` | query | System memories ColorOS (cần root) |
+| `search_personal_orders` | query | Đơn hàng trong system memories (cần root) |
+| `search_saved_places` | query | Địa điểm đã lưu trong system memories (cần root) |
 | `set_setting` | write | Đổi setting system/secure/global (cần root) |
 | `set_device_state` | write | Bật/tắt Wi-Fi hoặc Bluetooth (cần root) |
 | `app_state_control` | write | Force-stop / freeze / unfreeze app (cần root) |

@@ -1,4 +1,4 @@
-# MCP Tools E-Muse (70)
+# MCP Tools E-Muse (77)
 
 Mọi tool (trừ `device_list`, `tool_flags`) đều có `deviceId` optional —
 bắt buộc khi có nhiều máy cùng kết nối.
@@ -14,7 +14,8 @@ bắt buộc khi có nhiều máy cùng kết nối.
 | `media_control` | write | - | Phím media: play/pause/play_pause/next/previous/stop |
 | `set_alarm` | write | - | Đặt báo thức hệ thống (giờ/phút, label, vibrate, repeat_days) |
 | `set_timer` | write | - | Đặt timer hệ thống (1–86400 giây) |
-| `list_alarms` | query | - | Báo thức hệ thống kế tiếp (full listing cần DB clock app — P7) |
+| `list_alarms` | query | - | Full listing báo thức từ DB ColorOS clock app (fallback: báo thức kế tiếp qua AlarmManager) |
+| `list_active_timers` | query | - | Timer đang chạy từ DB ColorOS clock app (cần root, ColorOS) |
 | `top_memory_apps` | query | - | Process tốn RAM nhất (root `ps`, fallback ActivityManager) |
 | `top_storage_apps` | query | - | App tốn bộ nhớ nhất (cần root `dumpsys diskstats`) |
 | `get_current_context` | query | - | Giờ, timezone, weekday, locale, last-known location (nếu đã có quyền) |
@@ -71,6 +72,12 @@ bắt buộc khi có nhiều máy cùng kết nối.
 | `get_logcat` | query | - | Logcat `-d -v threadtime` qua root (max_lines 20–500). Không cần manifest permission |
 | `get_setting` | query | - | Đọc 1 setting (namespace system/secure/global), fallback root `settings get` khi public API trả null |
 | `get_device_environment` | query | - | Môi trường máy: interactive/locked, ringer mode, DND filter, audio outputs, số display. Không cần permission |
+| `search_coloros_notes` | query | - | Ghi chú & to-do ColorOS (cần root, ColorOS) |
+| `search_coloros_recordings` | query | - | Ghi âm thường + ghi âm cuộc gọi ColorOS (cần root, ColorOS) |
+| `search_recording_summaries` | query | - | Tóm tắt phiên âm gắn với ghi âm ColorOS (cần root, ColorOS) |
+| `search_coloros_memories` | query | - | System memories ColorOS: bills, lịch, pickup codes, parcels, places, attachments (cần root, ColorOS) |
+| `search_personal_orders` | query | - | Đơn hàng (đồ ăn, mua sắm, vé...) trong system memories (cần root, ColorOS) |
+| `search_saved_places` | query | - | Địa điểm đã lưu trong system memories (cần root, ColorOS) |
 | `set_setting` | write | Đổi 1 setting (namespace system/secure/global) qua root `settings put` — root-only, không cần manifest permission |
 | `set_device_state` | write | Bật/tắt Wi-Fi hoặc Bluetooth qua root (`cmd wifi`/`cmd bluetooth_manager`) — root-only |
 | `app_state_control` | write | Force-stop / freeze (`pm disable-user`) / unfreeze (`pm enable`) app theo package name — root-only |
@@ -113,13 +120,13 @@ Hai nhóm nhạy cảm mặc định TẮT; bật trong app (mục "Quyền tool
 | Nhóm | Mặc định | Tools |
 |---|---|---|
 | `terminal_file` | Bật | `shell_exec`, `file_list`, `file_pull`, `file_push`, `file_delete` |
-| `device_direct` | Bật | `device_list`, `device_info`, `device_status`, `network_info`, `get_volume`, `set_volume`, `media_control`, `set_alarm`, `set_timer`, `list_alarms`, `top_memory_apps`, `top_storage_apps`, `app_list`, `app_info`, `wait`, `wait_for_text`, `wait_for_package` |
-| `sensitive_read` | Tắt | `get_current_context`, `set_clipboard`, `get_clipboard`, `screen_capture`, `ui_dump`, `ui_snapshot`, `observe_screen`, `search_contacts`, `search_call_history`, `search_messages`, `search_calendar_events`, `search_media`, `search_audio`, `search_recordings`, `search_files`, `search_downloads`, `get_current_location`, `recent_app_activity`, `app_usage_summary`, `recent_notifications`, `wifi_credentials`, `read_sms_code`, `get_logcat`, `get_setting`, `get_device_environment` |
+| `device_direct` | Bật | `device_list`, `device_info`, `device_status`, `network_info`, `get_volume`, `set_volume`, `media_control`, `set_alarm`, `set_timer`, `list_alarms`, `list_active_timers`, `top_memory_apps`, `top_storage_apps`, `app_list`, `app_info`, `wait`, `wait_for_text`, `wait_for_package` |
+| `sensitive_read` | Tắt | `get_current_context`, `set_clipboard`, `get_clipboard`, `screen_capture`, `ui_dump`, `ui_snapshot`, `observe_screen`, `search_contacts`, `search_call_history`, `search_messages`, `search_calendar_events`, `search_media`, `search_audio`, `search_recordings`, `search_files`, `search_downloads`, `get_current_location`, `recent_app_activity`, `app_usage_summary`, `recent_notifications`, `wifi_credentials`, `read_sms_code`, `get_logcat`, `get_setting`, `get_device_environment`, `search_coloros_notes`, `search_coloros_recordings`, `search_recording_summaries`, `search_coloros_memories`, `search_personal_orders`, `search_saved_places` |
 | `sensitive_action` | Tắt | `app_install`, `app_uninstall`, `app_start`, `app_stop`, `open_uri`, `input_tap`, `tap_and_observe`, `input_swipe`, `tap_area`, `long_press`, `long_press_element`, `scroll`, `scroll_element`, `input_key`, `input_text`, `replace_text`, `clear_text`, `paste_text`, `open_system_panel`, `set_setting`, `set_device_state`, `app_state_control` |
 
 Tool chưa gán nhóm (không nên xảy ra) bị chặn mặc định (fail-closed).
 
-## Bảng permission Android (P5 audit)
+## Bảng permission Android (P5 audit, P7 bổ sung)
 
 Mọi permission dùng bởi tool đã khai báo trong `AndroidManifest.xml`.
 Tool thiếu runtime permission **không tự xin giữa MCP call** — trả lỗi
@@ -144,10 +151,16 @@ Tool thiếu runtime permission **không tự xin giữa MCP call** — trả l�
 | `set_setting` | (không) — root `settings put` | root-only |
 | `set_device_state` | (không) — root `cmd wifi` / `cmd bluetooth_manager` | root-only |
 | `app_state_control` | (không) — root `am`/`pm` + `getApplicationInfo` (`QUERY_ALL_PACKAGES` đã có) | root-only |
+| `search_coloros_notes` | (không) — root `content query content://com.nearme.note/rich_notes` | root-only |
+| `search_coloros_recordings` | (không) — root `content query content://com.oneplus.soundrecorder.provider/records` | root-only |
+| `search_recording_summaries` | (không) — root `content query` 2 recorder summary URI | root-only |
+| `search_coloros_memories`, `search_personal_orders`, `search_saved_places` | (không) — root snapshot `com.oplus.aimemory/databases/ai_memory` | root-only |
+| `list_active_timers` | (không) — root snapshot `com.oneplus.deskclock/databases/alarms.db` | root-only |
+| `list_alarms` | (không) — root snapshot `alarms.db` khi có, fallback `AlarmManager` (không permission) | root-only / không cần |
 
-Defer sang P7: các tool đọc private provider của ColorOS (notes, recordings,
-memories) và private health database — cần OEM provider, không port bằng
-cách đoán.
+P7 hoàn tất: 7 tools ColorOS đã port (không cần thêm manifest permission —
+cả 7 đều root-only vì đọc private provider/database của app khác, không có
+runtime permission nào cấp được).
 
 ## Gợi ý preset
 
