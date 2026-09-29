@@ -72,6 +72,38 @@ const toolFailed = (id: unknown, message: string) =>
     structuredContent: { code: "DEVICE_ERROR", message, retryable: false },
   });
 
+// tool_flags: read or mutate the per-tool on/off flags stored in the DO.
+const handleToolFlags = async (
+  args: Record<string, unknown>,
+  gateway: DeviceGateway,
+): Promise<unknown> => {
+  if (args.reset === true) {
+    const enableAll: Record<string, boolean> = {};
+    for (const tool of TOOL_DEFS) {
+      if (tool.name !== "tool_flags") enableAll[tool.name] = true;
+    }
+    await gateway.setToolFlags(enableAll);
+  } else if (args.set !== null && typeof args.set === "object") {
+    const updates: Record<string, boolean> = {};
+    for (const [name, enabled] of Object.entries(
+      args.set as Record<string, unknown>,
+    )) {
+      if (typeof enabled === "boolean") updates[name] = enabled;
+    }
+    await gateway.setToolFlags(updates);
+  }
+  const flags = await gateway.getToolFlags();
+  return {
+    tools: TOOL_DEFS.filter((tool) => tool.name !== "tool_flags").map(
+      (tool) => ({
+        name: tool.name,
+        enabled: flags[tool.name] !== false,
+        kind: tool.kind,
+      }),
+    ),
+  };
+};
+
 export const handleMcpRequest = async (
   request: Request,
   env: EmuseEnv,
@@ -140,8 +172,11 @@ export const handleMcpRequest = async (
     if (env.EMUSE_READ_DISABLED === "1") {
       return rpcError(message.id, -32000, "MCP reads disabled");
     }
+    const flags = await gateway.getToolFlags();
     return rpcResult(message.id, {
-      tools: TOOL_DEFS.map((tool) => ({
+      tools: TOOL_DEFS.filter(
+        (tool) => tool.name === "tool_flags" || flags[tool.name] !== false,
+      ).map((tool) => ({
         name: tool.name,
         description: tool.description,
         inputSchema: tool.inputSchema,
@@ -153,10 +188,21 @@ export const handleMcpRequest = async (
     const name = String(message.params?.name ?? "");
     const def = toolByName.get(name);
     if (!def) return rpcError(message.id, -32601, `Unknown tool ${name}`);
+    const args = (message.params?.arguments ?? {}) as Record<string, unknown>;
+    if (name === "tool_flags") {
+      return toolOk(message.id, await handleToolFlags(args, gateway));
+    }
+    const flags = await gateway.getToolFlags();
+    if (flags[name] === false) {
+      return rpcError(
+        message.id,
+        -32000,
+        `Tool "${name}" is disabled. Call tool_flags to see or change the enabled tools.`,
+      );
+    }
     if (def.kind === "write" && env.EMUSE_WRITE_DISABLED === "1") {
       return rpcError(message.id, -32000, "MCP writes disabled");
     }
-    const args = (message.params?.arguments ?? {}) as Record<string, unknown>;
     try {
       if (name === "device_list") {
         return toolOk(message.id, await gateway.listDevices());

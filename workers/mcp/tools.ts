@@ -316,6 +316,28 @@ export const TOOL_DEFS: ToolDef[] = [
     kind: "query",
     cmd: "ui.dump",
   },
+  {
+    name: "tool_flags",
+    description:
+      "Get or change which E-muse tools are enabled. With no arguments, returns the on/off state of every tool. Pass {set: {shell_exec: false, file_push: false}} to disable tools, or {reset: true} to re-enable all. Disabled tools are hidden from tools/list and rejected on tools/call. This tool is always available and cannot be disabled. Note: the EMUSE_WRITE_DISABLED kill-switch is still enforced at call time regardless of flags.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        set: {
+          type: "object",
+          description: "Map of tool name to enabled flag, e.g. {shell_exec: false}.",
+          additionalProperties: { type: "boolean" },
+        },
+        reset: {
+          type: "boolean",
+          description: "Re-enable every tool.",
+        },
+      },
+      additionalProperties: false,
+    },
+    annotations: RO,
+    kind: "query",
+  },
 ];
 
 export const toolByName: Map<string, ToolDef> = new Map(

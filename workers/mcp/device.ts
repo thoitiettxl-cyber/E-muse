@@ -12,6 +12,7 @@ import type {
   EmuseEnv,
   HelloMessage,
 } from "./protocol.ts";
+import { TOOL_DEFS, toolByName } from "./tools.ts";
 import { handleMcpRequest } from "./server.ts";
 
 interface PendingCall {
@@ -183,6 +184,7 @@ export class DeviceLink extends DurableObject<EmuseEnv> {
   }
 
   private gateway(): DeviceGateway {
+    const self = this;
     return {
       listDevices: async (): Promise<DeviceInfo[]> =>
         [...this.byDevice.entries()].map(([deviceId, ws]) => {
@@ -199,7 +201,38 @@ export class DeviceLink extends DurableObject<EmuseEnv> {
         args: Record<string, unknown>,
         timeoutMs = 30000,
       ): Promise<unknown> => this.rpc(deviceId, cmd, args, timeoutMs),
+      getToolFlags: async (): Promise<Record<string, boolean>> => {
+        const disabled = await self.getDisabledTools();
+        const flags: Record<string, boolean> = {};
+        for (const tool of TOOL_DEFS) {
+          if (tool.name === "tool_flags") continue;
+          flags[tool.name] = !disabled.has(tool.name);
+        }
+        return flags;
+      },
+      setToolFlags: async (
+        updates: Record<string, boolean>,
+      ): Promise<Record<string, boolean>> => {
+        const disabled = await self.getDisabledTools();
+        for (const [name, enabled] of Object.entries(updates)) {
+          // tool_flags can never be disabled; unknown names are ignored.
+          if (name === "tool_flags" || !toolByName.has(name)) continue;
+          if (enabled) disabled.delete(name);
+          else disabled.add(name);
+        }
+        await self.setDisabledTools(disabled);
+        return self.gateway().getToolFlags();
+      },
     };
+  }
+
+  private async getDisabledTools(): Promise<Set<string>> {
+    const stored = await this.ctx.storage.get<string[]>("disabledTools");
+    return new Set(stored ?? []);
+  }
+
+  private async setDisabledTools(disabled: Set<string>): Promise<void> {
+    await this.ctx.storage.put("disabledTools", [...disabled]);
   }
 
   private pickSocket(deviceId: string | undefined): WebSocket {

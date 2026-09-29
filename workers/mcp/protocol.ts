@@ -69,4 +69,8 @@ export interface DeviceGateway {
     args: Record<string, unknown>,
     timeoutMs?: number,
   ): Promise<unknown>;
+  /** Tool on/off flags: tool name -> enabled. tool_flags itself is always on. */
+  getToolFlags(): Promise<Record<string, boolean>>;
+  /** Merge updates (unknown names and tool_flags are ignored). Returns new flags. */
+  setToolFlags(updates: Record<string, boolean>): Promise<Record<string, boolean>>;
 }
