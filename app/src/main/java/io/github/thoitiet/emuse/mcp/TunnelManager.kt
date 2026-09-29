@@ -81,8 +81,15 @@ class TunnelManager(
                 tmp.outputStream().use { output -> input.copyTo(output) }
             }
             conn.disconnect()
-            // Sanity: must look like a PEM bundle.
-            val head = tmp.inputStream().bufferedReader().use { it.readLine() } ?: ""
+            // Sanity: must look like a PEM bundle. (curl.se's file starts
+            // with ## comment lines, so scan the head, not just line 1.)
+            val head = StringBuilder()
+            tmp.inputStream().bufferedReader().use { r ->
+                repeat(40) {
+                    val line = r.readLine() ?: return@repeat
+                    head.append(line).append('\n')
+                }
+            }
             if (tmp.length() < CA_BUNDLE_MIN_BYTES || !head.contains("BEGIN CERTIFICATE")) {
                 tmp.delete()
                 return@withContext null
