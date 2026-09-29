@@ -15,4 +15,8 @@ class Prefs(ctx: Context) {
     var apiKey: String
         get() = sp.getString("api_key", "") ?: ""
         set(v) = sp.edit().putString("api_key", v).apply()
+
+    var overlayEnabled: Boolean
+        get() = sp.getBoolean("overlay_enabled", false)
+        set(v) = sp.edit().putBoolean("overlay_enabled", v).apply()
 }

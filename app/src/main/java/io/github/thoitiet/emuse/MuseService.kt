@@ -51,11 +51,12 @@ class MuseService : Service() {
         super.onCreate()
         createChannel()
         startForegroundX(buildNotification("E-Muse đang khởi động…"), fgTypes)
-        dispatcher = CommandDispatcher(this, ::sendResult)
+        dispatcher = CommandDispatcher(this, ::sendResult, FloatingOverlay::event)
         client = OkHttpClient.Builder()
             .pingInterval(20, TimeUnit.SECONDS)
             .build()
         running = true
+        if (Prefs(this).overlayEnabled) FloatingOverlay.show(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -95,6 +96,7 @@ class MuseService : Service() {
 
     override fun onDestroy() {
         running = false
+        FloatingOverlay.hide()
         runCatching { dispatcher.shutdown() }
         scope.cancel()
         try {
@@ -138,6 +140,8 @@ class MuseService : Service() {
                 .put("token", Prefs(this@MuseService).apiKey.trim())
             webSocket.send(hello.toString())
             updateNotification("E-Muse: đã kết nối • $deviceId")
+            FloatingOverlay.setConnected(true)
+            FloatingOverlay.event("Đã kết nối Worker")
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -149,11 +153,14 @@ class MuseService : Service() {
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            FloatingOverlay.setConnected(false)
             scheduleReconnect()
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             updateNotification("E-Muse: mất kết nối, thử lại…")
+            FloatingOverlay.setConnected(false)
+            FloatingOverlay.event("Mất kết nối: ${t.message?.take(40)}")
             scheduleReconnect()
         }
     }

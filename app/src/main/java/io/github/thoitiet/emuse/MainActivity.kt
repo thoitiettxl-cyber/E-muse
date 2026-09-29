@@ -107,6 +107,26 @@ class MainActivity : AppCompatActivity() {
                 projectionLauncher.launch(mgr.createScreenCaptureIntent())
             }
         }
+        val overlayBtn = Button(this).apply {
+            text = "Bóng nổi: ${if (prefs.overlayEnabled) "bật" else "tắt"}"
+            setOnClickListener {
+                if (!prefs.overlayEnabled && !Settings.canDrawOverlays(this@MainActivity)) {
+                    startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:$packageName"),
+                        ),
+                    )
+                    toast("Cấp quyền hiển thị trên ứng dụng khác rồi bấm lại")
+                    return@setOnClickListener
+                }
+                prefs.overlayEnabled = !prefs.overlayEnabled
+                if (prefs.overlayEnabled) FloatingOverlay.show(this@MainActivity)
+                else FloatingOverlay.hide()
+                text = "Bóng nổi: ${if (prefs.overlayEnabled) "bật" else "tắt"}"
+                refresh()
+            }
+        }
         statusView = TextView(this)
 
         root.addView(label("Worker URL"))
@@ -120,6 +140,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(stop)
         root.addView(acc)
         root.addView(projection)
+        root.addView(overlayBtn)
         root.addView(spacer(24))
         root.addView(label("Trạng thái:"))
         root.addView(statusView)
@@ -154,6 +175,7 @@ class MainActivity : AppCompatActivity() {
                     appendLine("Root: ${if (root) "có" else "không"}")
                     appendLine("Accessibility: ${if (acc) "đã bật" else "chưa bật"}")
                     appendLine("Chụp màn hình: ${if (ScreenCapture.hasProjection()) "MediaProjection" else if (root) "root screencap" else "chưa có"}")
+                    appendLine("Bóng nổi: ${if (Prefs(this@MainActivity).overlayEnabled) "bật" else "tắt"}")
                 }
             }
         }.start()

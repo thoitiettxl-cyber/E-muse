@@ -20,6 +20,7 @@ import org.json.JSONObject
 class CommandDispatcher(
     ctx: Context,
     private val send: (DeviceResult) -> Unit,
+    private val onEvent: (String) -> Unit = {},
 ) {
     private val appCtx = ctx.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -33,6 +34,8 @@ class CommandDispatcher(
 
     fun dispatch(cmd: DeviceCommand) {
         scope.launch {
+            val started = System.currentTimeMillis()
+            onEvent("▶ ${cmd.cmd}${shortArgs(cmd)}")
             val res = try {
                 val result = withTimeout(120_000) { execute(cmd) }
                 DeviceResult(cmd.id, true, result)
@@ -41,6 +44,8 @@ class CommandDispatcher(
             } catch (e: Exception) {
                 DeviceResult(cmd.id, false, error = e.message ?: e.javaClass.simpleName)
             }
+            val ms = System.currentTimeMillis() - started
+            onEvent(if (res.ok) "✓ ${cmd.cmd} (${ms}ms)" else "✗ ${cmd.cmd}: ${res.error?.take(60)}")
             send(res)
         }
     }
@@ -48,6 +53,22 @@ class CommandDispatcher(
     fun shutdown() {
         scope.cancel()
         ShellExecutor.close()
+    }
+
+    /** Short human-readable arg summary for the floating overlay, e.g. ` ls /sdcard`. */
+    private fun shortArgs(cmd: DeviceCommand): String {
+        val a = cmd.args
+        val s = when (cmd.cmd) {
+            Cmds.SHELL_EXEC -> a.optString("command")
+            Cmds.APP_INFO, Cmds.APP_UNINSTALL, Cmds.APP_STOP -> a.optString("package")
+            Cmds.APP_START -> a.optString("package").ifEmpty { a.optString("action") }
+            Cmds.FILE_LIST, Cmds.FILE_PULL, Cmds.FILE_PUSH, Cmds.FILE_DELETE -> a.optString("path")
+            Cmds.INPUT_TAP -> "(${a.optInt("x")}, ${a.optInt("y")})"
+            Cmds.INPUT_TEXT -> a.optString("text").take(20)
+            Cmds.INPUT_KEY -> "keyCode=${a.optInt("keyCode")}"
+            else -> ""
+        }.take(40)
+        return if (s.isNotEmpty()) " $s" else ""
     }
 
     private fun execute(cmd: DeviceCommand): Any? {
