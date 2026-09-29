@@ -70,6 +70,24 @@ root (tránh double-tap) — hãy `ui_snapshot` lại trước khi thử tiếp.
   (`-32000 "Tool ... is disabled"`).
 - Trạng thái lưu trong SharedPreferences của app.
 
+## Nhóm quyền (permission groups)
+
+Ngoài `tool_flags` (bật/tắt từng tool), mỗi tool thuộc đúng 1 nhóm quyền.
+Tool bị chặn khi nhóm của nó tắt — kể cả khi `tool_flags` đang bật
+(enforcement 2 lớp: `McpHandler` rồi `CommandDispatcher`).
+Hai nhóm nhạy cảm mặc định TẮT; bật trong app (mục "Quyền tool").
+`tool_flags` luôn khả dụng và không thuộc nhóm nào. Trạng thái nhóm cũng
+được trả về trong kết quả của `tool_flags` (mảng `groups`).
+
+| Nhóm | Mặc định | Tools |
+|---|---|---|
+| `terminal_file` | Bật | `shell_exec`, `file_list`, `file_pull`, `file_push`, `file_delete` |
+| `device_direct` | Bật | `device_list`, `device_info`, `app_list`, `app_info`, `wait`, `wait_for_text`, `wait_for_package` |
+| `sensitive_read` | Tắt | `get_current_context`, `set_clipboard`, `get_clipboard`, `screen_capture`, `ui_dump`, `ui_snapshot`, `observe_screen` |
+| `sensitive_action` | Tắt | `app_install`, `app_uninstall`, `app_start`, `app_stop`, `open_uri`, `input_tap`, `tap_and_observe`, `input_swipe`, `tap_area`, `long_press`, `long_press_element`, `scroll`, `scroll_element`, `input_key`, `input_text`, `replace_text`, `clear_text`, `paste_text`, `open_system_panel` |
+
+Tool chưa gán nhóm (không nên xảy ra) bị chặn mặc định (fail-closed).
+
 ## Gợi ý preset
 
 - **Chỉ đọc + quan sát**: tắt hết write trừ `app_start` nếu cần —

@@ -149,6 +149,15 @@ Mọi tool (trừ `device_list`) nhận `deviceId` tùy chọn — bỏ trống 
 
 Trạng thái lưu trong SharedPreferences của app.
 
+## Nhóm quyền tool
+
+Mỗi tool thuộc 1 trong 4 nhóm (chi tiết + mapping đầy đủ trong `docs/TOOLS.md`):
+`terminal_file` (mặc định bật), `device_direct` (mặc định bật),
+`sensitive_read` (mặc định tắt), `sensitive_action` (mặc định tắt).
+Bật/tắt trong app (mục "Quyền tool"). Tool bị chặn khi nhóm của nó tắt —
+kể cả khi `tool_flags` đang bật. Không có nhóm browser
+(`browser_use` đã loại khỏi scope).
+
 ## Bảo mật
 
 - `EMUSE_API_KEY` là secret duy nhất: tự đặt trong app, lưu trong file env của
