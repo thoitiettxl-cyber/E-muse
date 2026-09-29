@@ -10,7 +10,6 @@ import android.content.pm.ServiceInfo
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
-import android.os.SystemClock
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import io.github.thoitiet.emuse.exec.ScreenCapture
@@ -25,16 +24,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
-import org.json.JSONObject
-import java.util.concurrent.TimeUnit
-import kotlin.math.min
 
 class MuseService : Service() {
     companion object {
@@ -51,47 +40,25 @@ class MuseService : Service() {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private lateinit var client: OkHttpClient
     private lateinit var dispatcher: CommandDispatcher
     private var mcpHandler: McpHandler? = null
     private var localServer: LocalHttpServer? = null
     private var tunnel: TunnelManager? = null
-    private var ws: WebSocket? = null
-    private var reconnectDelayMs = 5000L
-    private var connectGen = 0
-    private var socketOpen = false
-    private var lastActivityMs = 0L
     private var fgTypes = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
         startForegroundX(buildNotification("E-Muse đang khởi động…"), fgTypes)
-        dispatcher = CommandDispatcher(this, ::sendResult, FloatingOverlay::event)
-        client = OkHttpClient.Builder()
-            .pingInterval(20, TimeUnit.SECONDS)
-            .build()
+        dispatcher = CommandDispatcher(this, FloatingOverlay::event)
         running = true
         if (Prefs(this).overlayEnabled) FloatingOverlay.show(this)
         startDirectEndpoint()
-        // Watchdog: heal half-open sockets (e.g. server redeploy killed the
-        // TCP connection without a close frame). The generation guard in
-        // connect() makes this safe to call any time.
-        scope.launch {
-            while (running) {
-                delay(60_000)
-                if (!running) break
-                val stale = !socketOpen ||
-                    SystemClock.elapsedRealtime() - lastActivityMs > 45_000
-                if (stale) connect()
-            }
-        }
     }
 
     /**
      * Direct mode: serve the MCP endpoint on localhost and (optionally)
-     * expose it publicly via Cloudflare Tunnel. The Worker relay keeps
-     * running untouched as a fallback.
+     * expose it publicly via Cloudflare Tunnel (Quick or named).
      */
     private fun startDirectEndpoint() {
         val prefs = Prefs(this)
@@ -118,10 +85,12 @@ class MuseService : Service() {
                 is TunnelManager.State.Running -> {
                     prefs.tunnelUrl = s.url
                     updateNotification("E-Muse: direct ${s.url}")
+                    FloatingOverlay.setConnected(true)
                     FloatingOverlay.event("Tunnel: ${s.url}")
                 }
                 is TunnelManager.State.Failed -> {
                     updateNotification("E-Muse: tunnel lỗi")
+                    FloatingOverlay.setConnected(false)
                     FloatingOverlay.event("Tunnel lỗi: ${s.reason.take(60)}")
                 }
                 is TunnelManager.State.Downloading ->
@@ -162,6 +131,7 @@ class MuseService : Service() {
         } else {
             tm.stop()
             prefs.tunnelUrl = ""
+            FloatingOverlay.setConnected(false)
             updateNotification("E-Muse: đang chạy (direct local)")
         }
     }
@@ -189,7 +159,6 @@ class MuseService : Service() {
         if (intent?.action == ACTION_START_PROJECTION) {
             startProjection(intent)
         }
-        connect()
         return START_STICKY
     }
 
@@ -222,106 +191,7 @@ class MuseService : Service() {
         runCatching { dispatcher.shutdown() }
         stopDirectEndpoint()
         scope.cancel()
-        try {
-            ws?.close(1000, "service stopped")
-        } catch (_: Exception) {
-        }
-        try {
-            client.dispatcher.executorService.shutdown()
-        } catch (_: Exception) {
-        }
         super.onDestroy()
-    }
-
-    private fun connect() {
-        val prefs = Prefs(this)
-        val httpUrl = prefs.workerUrl.trim().trimEnd('/')
-        val token = prefs.apiKey.trim()
-        if (httpUrl.isEmpty() || token.isEmpty()) {
-            updateNotification("E-Muse: chưa cấu hình URL / API key")
-            return
-        }
-        if (socketOpen && ws != null &&
-            SystemClock.elapsedRealtime() - lastActivityMs < 45_000
-        ) return // healthy connection already
-        // https:// -> wss://, http:// -> ws://
-        val wsUrl = httpUrl.replaceFirst("^http".toRegex(), "ws")
-        updateNotification("E-Muse: đang kết nối…")
-        // Generation guard: cancelling the old socket fires its onFailure, whose
-        // callbacks must be ignored so they can't schedule phantom reconnects
-        // that would kill the healthy new socket (reconnect flap loop).
-        val gen = ++connectGen
-        runCatching { ws?.cancel() }
-        ws = null
-        socketOpen = false
-        val request = Request.Builder().url(wsUrl).build()
-        ws = client.newWebSocket(request, SocketListener(gen))
-    }
-
-    private inner class SocketListener(private val gen: Int) : WebSocketListener() {
-        private fun alive() = gen == connectGen
-
-        override fun onOpen(webSocket: WebSocket, response: Response) {
-            if (!alive()) {
-                runCatching { webSocket.cancel() }
-                return
-            }
-            reconnectDelayMs = 5000L
-            socketOpen = true
-            lastActivityMs = SystemClock.elapsedRealtime()
-            val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
-            val hello = JSONObject()
-                .put("type", "hello")
-                .put("deviceId", deviceId)
-                .put("deviceName", Build.MODEL ?: "android")
-                .put("token", Prefs(this@MuseService).apiKey.trim())
-            webSocket.send(hello.toString())
-            updateNotification("E-Muse: đã kết nối • $deviceId")
-            FloatingOverlay.setConnected(true)
-            FloatingOverlay.event("Đã kết nối Worker")
-        }
-
-        override fun onMessage(webSocket: WebSocket, text: String) {
-            if (!alive()) return
-            lastActivityMs = SystemClock.elapsedRealtime()
-            try {
-                val o = JSONObject(text)
-                if (o.has("cmd")) dispatcher.dispatch(DeviceCommand.fromJson(o))
-            } catch (_: Exception) {
-            }
-        }
-
-        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            if (!alive()) return
-            socketOpen = false
-            FloatingOverlay.setConnected(false)
-            scheduleReconnect(gen)
-        }
-
-        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            if (!alive()) return
-            socketOpen = false
-            updateNotification("E-Muse: mất kết nối, thử lại…")
-            FloatingOverlay.setConnected(false)
-            FloatingOverlay.event("Mất kết nối: ${t.message?.take(40)}")
-            scheduleReconnect(gen)
-        }
-    }
-
-    private fun scheduleReconnect(gen: Int) {
-        if (!running) return
-        scope.launch {
-            delay(reconnectDelayMs)
-            reconnectDelayMs = min(reconnectDelayMs * 2, 60_000L)
-            if (running && gen == connectGen) connect()
-        }
-    }
-
-    private fun sendResult(result: DeviceResult) {
-        try {
-            ws?.send(result.toJson().toString())
-        } catch (_: Exception) {
-        }
     }
 
     private fun createChannel() {

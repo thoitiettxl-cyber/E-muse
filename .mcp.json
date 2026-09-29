@@ -1,1 +1,1 @@
-{"mcpServers":{"E-muse":{"headers":{"EMUSE_API_KEY":"${EMUSE_API_KEY}"},"protocolVersion":"2026-07-28","url":"https://e-muse-mcp.ngthanhhuy951.workers.dev/mcp"}}}
+{"mcpServers":{"E-muse":{"headers":{"EMUSE_API_KEY":"${EMUSE_API_KEY}"},"protocolVersion":"2026-07-28","url":"https://<tunnel-url-cua-ban>/mcp"}}}

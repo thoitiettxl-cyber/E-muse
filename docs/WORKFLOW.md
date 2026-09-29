@@ -1,24 +1,5 @@
 # Workflow làm việc E-Muse
 
-## Sửa Worker (TypeScript)
-
-```bash
-cd ~/workspace/E-muse
-npx tsc --noEmit          # typecheck, bắt buộc
-npm run deploy            # wrangler deploy --config wrangler.jsonc
-```
-
-Deploy xong test thật ngay:
-
-```bash
-~/workspace/skills/mcp/bin/mcp tools E-muse --refresh
-~/workspace/skills/mcp/bin/mcp call E-muse tool_flags --args '{}'
-~/workspace/skills/mcp/bin/mcp call E-muse device_list --args '{}'
-```
-
-Lưu ý: `mcp` CLI cache metadata tool 24h — sau khi deploy đổi tool thì
-`--refresh`. Key `EMUSE_API_KEY` nằm ở `~/.config/mcp/mcp.env` (mode 600).
-
 ## Sửa app Android (Kotlin)
 
 Build local thường fail ở sandbox (Gradle daemon không chạy được) — nguồn
@@ -52,22 +33,21 @@ Xem checklist "Thêm tool mới" trong `AGENTS.md`, chi tiết protocol ở
 
 ## Bật/tắt tool (tool_flags)
 
-Mặc định full 20 tools. Khi chỉ cần một số:
+Mặc định full 21 tools. Khi chỉ cần một số:
 
 ```bash
 # Chỉ bật đọc + chụp màn hình, tắt hết write nguy hiểm
-~/workspace/skills/mcp/bin/mcp call E-muse tool_flags --args \
+~/workspace/skills/mcp/bin/mcp call E-muse-direct tool_flags --args \
   '{"set":{"shell_exec":false,"app_install":false,"app_uninstall":false,"app_stop":false,"file_push":false,"file_delete":false,"input_tap":false,"input_swipe":false,"input_key":false,"input_text":false,"app_start":false}}'
 
 # Về lại full
-~/workspace/skills/mcp/bin/mcp call E-muse tool_flags --args '{"reset":true}'
+~/workspace/skills/mcp/bin/mcp call E-muse-direct tool_flags --args '{"reset":true}'
 ```
 
 ## Cài app lên máy (Boss tự làm)
 
 1. Lấy APK từ CI artifact (`E-Muse-release.apk`) hoặc build local.
-2. Mở app → nhập Worker URL
-   `https://e-muse-mcp.ngthanhhuy951.workers.dev/device/connect` + API key
-   → Save → Start service.
+2. Mở app → đặt API key → bật Cloudflare Tunnel (Quick hoặc named) → bật "Chạy nền".
 3. Bật Accessibility cho E-Muse (để tap/vuốt/gõ/UI dump không cần root).
-4. Pi gọi qua MCP server `E-muse` đã đăng ký trong `~/.config/mcp/mcp.json`.
+4. Pi gọi qua MCP server `E-muse-direct` trong `~/.config/mcp/mcp.json`
+   (`EMUSE_DIRECT_URL` trong `~/.config/mcp/mcp.env`, mode 600).

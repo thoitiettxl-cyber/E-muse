@@ -1,68 +1,80 @@
 # E-Muse
 
-E-Muse cho phép điều khiển điện thoại Android từ xa qua **MCP** (Model Context Protocol).
-Gồm 2 phần trong cùng repo:
+E-Muse biến điện thoại Android thành một **MCP server** (Model Context Protocol)
+chạy ngay trên máy, để AI agent (Muse, Claude, ...) điều khiển điện thoại từ xa:
+chạy shell, quản lý app, đọc/ghi file, chụp màn hình, chạm/vuốt/gõ phím, đọc cây UI.
 
-- **App Android** (`app/`, package `io.github.thoitiet.emuse`): chạy foreground service,
-  giữ WebSocket tới Worker, thực thi lệnh (shell, app, file, screenshot, input, UI dump)
-  rồi trả kết quả về.
-- **Cloudflare Worker** (`workers/mcp/`): MCP server chạy JSON-RPC 2.0 trên endpoint
-  `/mcp` (tự cài tay, không dùng MCP SDK — theo mẫu của KSHT), xác thực bằng API key,
-  điều phối lệnh tới từng máy qua Durable Object `DeviceLink`.
-
-Luồng hoạt động:
+Kiến trúc direct — không qua server trung gian:
 
 ```
-Pi (MCP client) ──POST /mcp──> Worker e-muse-mcp ──WebSocket──> App E-Muse ──> Android
-   (Bearer/EMUSE_API_KEY)        (Durable Object)      {id, cmd, args}      shell / API
+MCP client ──HTTPS POST /mcp──> Cloudflare Tunnel ──> App E-Muse ──> Android
+(Bearer EMUSE_API_KEY)          (Quick hoặc named)    127.0.0.1:18789
 ```
 
-## Deploy Worker
+App mở một HTTP server MCP ngay trên máy (`127.0.0.1:18789`) và dùng
+**Cloudflare Tunnel** (`cloudflared`, chạy ngay trong app, không cần cài thêm)
+để public endpoint này ra internet qua HTTPS.
 
-```bash
-cd E-muse
-npm install
-wrangler login
-wrangler secret put EMUSE_API_KEY   # key bí mật, KHÔNG commit vào repo
-wrangler deploy --config wrangler.jsonc
-```
+## Cài đặt
 
-Kiểm tra: `GET https://e-muse-mcp.ngthanhhuy951.workers.dev/health` → `{"ok":true}`.
+### Cách 1 — Tải APK từ CI (khuyến nghị)
 
-Các biến môi trường (vars trong `wrangler.jsonc`) để tắt nhanh khi cần:
+Mỗi lần push lên `main`, GitHub Actions build sẵn APK:
 
-| Var | Tác dụng |
-|---|---|
-| `EMUSE_CHANNEL_DISABLED=1` | Tắt toàn bộ kênh MCP (503) |
-| `EMUSE_READ_DISABLED=1` | Tắt tools/list |
-| `EMUSE_WRITE_DISABLED=1` | Tắt mọi tool ghi (write) |
+1. Vào tab **Actions** của repo → chọn run mới nhất → tải artifact
+   `E-Muse-debug.apk` (hoặc bản release).
+2. Cài APK lên điện thoại (cho phép "cài app không rõ nguồn" một lần).
 
-## Build app Android
+### Cách 2 — Build tay
 
-Mở thư mục này bằng **Android Studio** (hoặc chạy Gradle có cài Android SDK,
-compileSdk 34, JDK 17+):
+Cần Android SDK (compileSdk 34, build-tools 34.0.0) + JDK 17:
 
 ```bash
 gradle :app:assembleDebug
+# APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Cài APK lên máy, mở app:
+## Thiết lập trên điện thoại
 
-1. Nhập **Worker URL**: `https://e-muse-mcp.ngthanhhuy951.workers.dev/device/connect`
-2. Nhập **API key** (khớp với `EMUSE_API_KEY` đã put secret)
-3. Save → Start service
-4. (Khuyến nghị) bật Accessibility cho E-Muse để dùng tap/vuốt/gõ phím/đọc UI
-   không cần root; máy root thì mở khóa thêm shell root, screenshot, force-stop.
+Mở app E-Muse, màn hình cài đặt phong cách HyperOS:
 
-## Pi kết nối MCP
+1. **Truy cập → API key**: tự đặt một chuỗi bí mật dài (vd 32 ký tự ngẫu nhiên).
+   Mọi MCP client phải gửi đúng key này trong header `EMUSE_API_KEY`.
+2. **Cloudflare Tunnel → bật công tắc**:
+   - Để trống *Token* và *Hostname* → **Quick Tunnel**: chạy ngay, URL ngẫu nhiên
+     (đổi mỗi lần bật). Hợp cho dùng nhanh / test.
+   - Điền *Token* + *Hostname* → **Named Tunnel** (cố định, xem bên dưới).
+   - URL hiện ra trong app — bấm để copy.
+3. **Dịch vụ → bật "Chạy nền"** (foreground service).
+4. **Thiết bị**:
+   - Bật **Accessibility** cho E-Muse → dùng tap/vuốt/gõ phím/đọc UI không cần root.
+   - Bấm **Cấp quyền** ở mục Chụp màn hình → cho phép screenshot qua MediaProjection.
+   - Máy đã root: mở khóa thêm shell root, force-stop app, screenshot qua root.
+5. (Tùy chọn) **Dịch vụ → Bóng nổi**: nút nổi hiển thị log lệnh đang chạy.
 
-Thêm vào MCP client (file `.mcp.json` mẫu có sẵn ở repo root):
+### Named Tunnel (URL cố định)
+
+Cần tài khoản Cloudflare (miễn phí) + một domain đã add vào Cloudflare:
+
+1. Trên [Cloudflare dashboard](https://dash.cloudflare.com) → Zero Trust →
+   Networks → Tunnels → tạo tunnel, copy **token** (chuỗi dài bắt đầu bằng `eyJ...`).
+2. Trong tunnel vừa tạo: Public Hostname → add hostname
+   (vd `mcp.example.com`) → Service `http://127.0.0.1:18789`.
+   Cloudflare tự tạo DNS record cho hostname.
+3. Trong app E-Muse: dán token vào *Token*, hostname vào *Hostname*, bật tunnel.
+   URL hiển thị sẽ là `https://mcp.example.com` — không đổi giữa các lần bật/tắt.
+
+> Token là secret: chỉ dán trong app, **không commit vào repo, không chia sẻ**.
+
+## Kết nối MCP client
+
+Trỏ MCP client tới URL tunnel (Quick hoặc named):
 
 ```json
 {
   "mcpServers": {
     "E-muse": {
-      "url": "https://e-muse-mcp.ngthanhhuy951.workers.dev/mcp",
+      "url": "https://<tunnel-url-của-bạn>/mcp",
       "protocolVersion": "2026-07-28",
       "headers": { "EMUSE_API_KEY": "${EMUSE_API_KEY}" }
     }
@@ -70,35 +82,15 @@ Thêm vào MCP client (file `.mcp.json` mẫu có sẵn ở repo root):
 }
 ```
 
-Thay `<account>` bằng workers subdomain thật, đặt `EMUSE_API_KEY=...` trong
-`~/.config/mcp/mcp.env` (file mode 600, không commit).
+Đặt `EMUSE_API_KEY=<key-đã-đặt-trong-app>` trong file env riêng của MCP client
+(vd `~/.config/mcp/mcp.env`, mode 600). Kiểm tra nhanh:
 
-## Protocol WebSocket (app ↔ Worker)
-
-App mở WebSocket tới `/device/connect`, gửi đầu tiên:
-
-```json
-{ "type": "hello", "deviceId": "<ANDROID_ID>", "deviceName": "<Build.MODEL>", "token": "<EMUSE_API_KEY>" }
+```bash
+curl -s https://<tunnel-url-của-bạn>/health
+# {"ok":true,"mode":"direct"}
 ```
 
-Token sai → socket bị đóng (4401). Sau đó Worker gửi lệnh:
-
-```json
-{ "id": "<uuid>", "cmd": "shell.exec", "args": { "command": "ls /sdcard" } }
-```
-
-App thực thi rồi trả:
-
-```json
-{ "id": "<uuid>", "ok": true, "result": { ... } }
-// hoặc
-{ "id": "<uuid>", "ok": false, "error": "..." }
-```
-
-Tên `cmd` khớp với union `Cmd` trong `workers/mcp/protocol.ts`
-(đồng bộ với `Cmds` trong `app/.../Protocol.kt`).
-
-## Danh sách tools (19)
+## Danh sách tools (21)
 
 | Tool | Loại | Mô tả |
 |---|---|---|
@@ -116,19 +108,41 @@ Tên `cmd` khớp với union `Cmd` trong `workers/mcp/protocol.ts`
 | `file_push` | write | Ghi file base64 lên máy |
 | `file_delete` | write | Xóa file/thư mục |
 | `screen_capture` | query | Screenshot PNG (trả image block) |
-| `input_tap` | write | Chạm (x, y) |
+| `input_tap` | write | Chạm (x, y) hoặc theo `elementId` từ `ui_snapshot` |
 | `input_swipe` | write | Vuốt (x1,y1 → x2,y2) |
 | `input_key` | write | Gửi key code |
 | `input_text` | write | Gõ text vào ô đang focus |
 | `ui_dump` | query | Cây UI hiện tại (JSON) |
+| `ui_snapshot` | query | Danh sách element gọn nhẹ (id `e0…`, text, bounds) cho automation |
+| `tool_flags` | query | Bật/tắt từng tool (không bao giờ bị tắt) |
 
 Mọi tool (trừ `device_list`) nhận `deviceId` tùy chọn — bỏ trống khi chỉ có
-1 máy kết nối; nhiều máy thì bắt buộc chỉ định.
+1 máy kết nối.
+
+## Tắt bớt tool nguy hiểm
+
+`tool_flags` cho phép tắt tool theo tên mà không cần rebuild:
+
+```json
+{ "set": { "shell_exec": false } }   // tắt shell
+{ "reset": true }                    // bật lại tất cả
+{ }                                  // xem trạng thái hiện tại
+```
+
+Trạng thái lưu trong SharedPreferences của app.
 
 ## Bảo mật
 
-- `EMUSE_API_KEY` là secret: chỉ đặt qua `wrangler secret put`, trong app nhập
-  tay, trong MCP client để ở `mcp.env`. **Không commit key vào repo.**
-- Tool `shell_exec` với `asRoot` cho quyền kiểm soát toàn bộ máy — chỉ bật
-  `EMUSE_WRITE_DISABLED=0` khi thật sự cần.
-- Kênh `/device/connect` cũng xác thực bằng cùng API key ở message `hello`.
+- `EMUSE_API_KEY` là secret duy nhất: tự đặt trong app, lưu trong file env của
+  MCP client. **Không commit key/token vào repo.**
+- `shell_exec` với `asRoot` cho quyền kiểm soát toàn bộ máy — chỉ bật khi thật
+  sự cần, và cân nhắc tắt bớt tool write bằng `tool_flags`.
+- Tunnel mã hóa TLS end-to-end qua Cloudflare; Quick Tunnel URL ngẫu nhiên
+  nhưng vẫn cần đúng API key mới gọi được.
+
+## Tài liệu chi tiết
+
+- `docs/ARCHITECTURE.md` — kiến trúc app, MCP server, tunnel
+- `docs/PROTOCOL.md` — HTTP/MCP surface trên máy
+- `docs/TOOLS.md` — chi tiết từng tool
+- `docs/WORKFLOW.md` — quy trình dev/build/release

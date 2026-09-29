@@ -5,13 +5,7 @@ import android.content.Context
 class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("emuse", Context.MODE_PRIVATE)
 
-    var workerUrl: String
-        get() = sp.getString(
-            "worker_url",
-            "https://e-muse-mcp.ngthanhhuy951.workers.dev/device/connect",
-        ) ?: ""
-        set(v) = sp.edit().putString("worker_url", v).apply()
-
+    /** API key guarding the on-device MCP endpoint (sent as EMUSE_API_KEY header). */
     var apiKey: String
         get() = sp.getString("api_key", "") ?: ""
         set(v) = sp.edit().putString("api_key", v).apply()

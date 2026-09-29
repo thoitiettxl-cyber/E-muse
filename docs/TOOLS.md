@@ -5,7 +5,7 @@ bắt buộc khi có nhiều máy cùng kết nối.
 
 | Tool | Loại | Nguy hiểm | Mô tả |
 |---|---|---|---|
-| `device_list` | query | - | Liệt kê máy đang kết nối (Worker serve, không qua máy) |
+| `device_list` | query | - | Liệt kê máy đang kết nối (serve local, 1 máy) |
 | `device_info` | query | - | Model, Android/SDK, root, accessibility, screen-capture |
 | `shell_exec` | write | **yes** | Shell `sh -c`; `asRoot` → `su -c` (cần root) |
 | `app_list` | query | - | App đã cài (`system: true` để gồm system app) |
@@ -40,9 +40,7 @@ bắt buộc khi có nhiều máy cùng kết nối.
 
 - Tool bị tắt: ẩn khỏi `tools/list`, gọi vào bị từ chối
   (`-32000 "Tool ... is disabled"`).
-- Trạng thái lưu trong Durable Object → survives deploy Worker.
-- `EMUSE_WRITE_DISABLED=1` vẫn chặn mọi tool write ở call-time,
-  không bị flag bypass.
+- Trạng thái lưu trong SharedPreferences của app.
 
 ## Gợi ý preset
 

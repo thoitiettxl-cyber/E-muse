@@ -20,7 +20,6 @@ import org.json.JSONObject
 
 class CommandDispatcher(
     ctx: Context,
-    private val send: (DeviceResult) -> Unit,
     private val onEvent: (String) -> Unit = {},
 ) {
     private val appCtx = ctx.applicationContext
@@ -33,20 +32,9 @@ class CommandDispatcher(
         ScreenExecutor.configure(appCtx.resources.displayMetrics.densityDpi)
     }
 
-    fun dispatch(cmd: DeviceCommand) {
-        scope.launch {
-            val started = System.currentTimeMillis()
-            onEvent("▶ ${cmd.cmd}${shortArgs(cmd)}")
-            val res = executeCommand(cmd)
-            val ms = System.currentTimeMillis() - started
-            onEvent(if (res.ok) "✓ ${cmd.cmd} (${ms}ms)" else "✗ ${cmd.cmd}: ${res.error?.take(60)}")
-            send(res)
-        }
-    }
-
     /**
      * Synchronous variant for the on-device MCP server: runs the command and
-     * returns its result instead of routing it through [send].
+     * returns its result.
      */
     suspend fun executeCommand(
         cmd: DeviceCommand,

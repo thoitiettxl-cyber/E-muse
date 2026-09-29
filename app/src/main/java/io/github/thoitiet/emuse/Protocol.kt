@@ -2,7 +2,7 @@ package io.github.thoitiet.emuse
 
 import org.json.JSONObject
 
-/** Command names — must match workers/mcp/protocol.ts Cmd union. */
+/** Command names for the on-device executor. */
 object Cmds {
     const val DEVICE_INFO = "device.info"
     const val SHELL_EXEC = "shell.exec"
