@@ -58,19 +58,27 @@ object FloatingOverlay {
     }
 
     fun hide() {
-        main.post {
-            runCatching { bubble?.let { wm?.removeView(it) } }
-            runCatching { panel?.let { wm?.removeView(it) } }
-            bubble = null
-            orb = null
-            panel = null
-            wm = null
-            expanded = false
-            logs.clear()
-            busy = false
-            connected = false
-            ringColor = 0xFF9E9E9E.toInt()
+        // onDestroy can run after the main looper is gone; posting then would
+        // leak the window. Remove synchronously when already on the main thread.
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            removeViews()
+        } else {
+            main.post { removeViews() }
         }
+    }
+
+    private fun removeViews() {
+        runCatching { bubble?.let { wm?.removeView(it) } }
+        runCatching { panel?.let { wm?.removeView(it) } }
+        bubble = null
+        orb = null
+        panel = null
+        wm = null
+        expanded = false
+        logs.clear()
+        busy = false
+        connected = false
+        ringColor = 0xFF9E9E9E.toInt()
     }
 
     /** Append a line to the floating log, e.g. "▶ shell.exec ls /sdcard". */
