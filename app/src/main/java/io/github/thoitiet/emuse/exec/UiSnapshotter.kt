@@ -65,11 +65,14 @@ object UiSnapshotter {
         val out = JSONArray()
         val limit = maxNodes.coerceIn(1, 2000)
         val q = query?.trim()?.takeIf { it.isNotEmpty() }?.let(::norm)
+        // walk() returns true when [root] itself was cached: the cache owns it
+        // then and it must NOT be recycled (dead node in cache otherwise).
+        var rootCached = false
         try {
             val counter = intArrayOf(0)
-            walk(root, counter, nodes, bounds, out, q, compact, limit)
+            rootCached = walk(root, counter, nodes, bounds, out, q, compact, limit)
         } finally {
-            runCatching { root.recycle() }
+            if (!rootCached) runCatching { root.recycle() }
         }
         cache = nodes
         cacheBounds = bounds
@@ -160,10 +163,18 @@ object UiSnapshotter {
         checkFresh(observationId)
         val node = cache[id]
         if (node != null) {
-            val ok = runCatching {
+            // Eta contract: performAction returning false = rejected (safe to
+            // fall back to a coordinate tap); THROWING = outcome unknown — the
+            // click may already have been dispatched, so never replay blindly.
+            val dispatch = runCatching {
                 node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            }.getOrDefault(false)
-            if (ok) {
+            }
+            if (dispatch.isFailure) {
+                return JSONObject()
+                    .put("ok", false).put("code", "ACTION_OUTCOME_UNKNOWN")
+                    .put("note", "node action threw; outcome unknown — re-observe before retrying, do NOT replay")
+            }
+            if (dispatch.getOrDefault(false)) {
                 settleAfter("tap")
                 return JSONObject().put("ok", true).put("via", "node-click").put("id", id)
             }
