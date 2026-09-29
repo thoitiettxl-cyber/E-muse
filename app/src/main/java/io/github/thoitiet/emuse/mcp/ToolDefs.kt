@@ -50,6 +50,88 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         true, false, true, false, "query", "device.context",
     ),
     ToolDef(
+        "device_status",
+        "Read battery level/charging, memory (available/total), storage (available/total), system version, security patch, and uptime.",
+        withDevice(""),
+        true, false, true, false, "query", "device.status",
+    ),
+    ToolDef(
+        "network_info",
+        "Read the current network: connected/validated/metered, transports (wifi/cellular/ethernet/vpn), Wi-Fi state, current SSID and RSSI when visible. Does not return saved passwords.",
+        withDevice(""),
+        true, false, true, false, "query", "network.info",
+    ),
+    ToolDef(
+        "get_volume",
+        "Read the current volume level of every stream (media, alarm, ring, notification): level, max_level, percent.",
+        withDevice(""),
+        true, false, true, false, "query", "volume.get",
+    ),
+    ToolDef(
+        "set_volume",
+        "Set a volume stream directly; do not operate the volume GUI. percent 0 mutes the stream.",
+        withDevice(
+            "\"stream\":{\"type\":\"string\",\"enum\":[\"media\",\"alarm\",\"ring\",\"notification\"],\"description\":\"Volume stream.\"}," +
+                "\"percent\":{\"type\":\"number\",\"description\":\"0 to 100.\"}",
+            "\"stream\",\"percent\"",
+        ),
+        false, false, true, false, "write", "volume.set",
+    ),
+    ToolDef(
+        "media_control",
+        "Send a media key to the active media session: play, pause, play_pause, next, previous, or stop.",
+        withDevice(
+            "\"action\":{\"type\":\"string\",\"enum\":[\"play\",\"pause\",\"play_pause\",\"next\",\"previous\",\"stop\"]}",
+            "\"action\"",
+        ),
+        false, false, true, false, "write", "media.control",
+    ),
+    ToolDef(
+        "set_alarm",
+        "Create a system alarm directly; do not use the GUI. For relative times, convert with get_current_context first. hour/minute use the device local time. If the system does not accept a direct action, the clock UI is opened instead (mode ui_fallback).",
+        withDevice(
+            "\"hour\":{\"type\":\"number\",\"description\":\"0 to 23.\"}," +
+                "\"minute\":{\"type\":\"number\",\"description\":\"0 to 59.\"}," +
+                "\"label\":{\"type\":\"string\",\"description\":\"Alarm label, up to 100 characters.\"}," +
+                "\"vibrate\":{\"type\":\"boolean\",\"description\":\"Whether to vibrate. Default true.\"}," +
+                "\"repeat_days\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\",\"sat\",\"sun\"]},\"description\":\"Repeat weekdays; omit for the next occurrence only.\"}",
+            "\"hour\",\"minute\"",
+        ),
+        false, false, false, false, "write", "alarm.set",
+    ),
+    ToolDef(
+        "set_timer",
+        "Create a system timer directly; do not use the GUI. If the system does not accept a direct action, the clock UI is opened instead (mode ui_fallback).",
+        withDevice(
+            "\"duration_seconds\":{\"type\":\"number\",\"description\":\"Timer duration in seconds, 1 to 86400.\"}," +
+                "\"label\":{\"type\":\"string\",\"description\":\"Timer label, up to 100 characters.\"}",
+            "\"duration_seconds\"",
+        ),
+        false, false, false, false, "write", "timer.set",
+    ),
+    ToolDef(
+        "list_alarms",
+        "Read the next system alarm (trigger time). Full alarm/timer listing needs the clock app's private database and is not available through this device-direct tool.",
+        withDevice(""),
+        true, false, true, false, "query", "alarm.list",
+    ),
+    ToolDef(
+        "top_memory_apps",
+        "List processes with the highest current memory usage (pid, process name, rss_bytes). Uses root ps when available, otherwise ActivityManager PSS.",
+        withDevice(
+            "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "memory.top_apps",
+    ),
+    ToolDef(
+        "top_storage_apps",
+        "List apps with the highest combined app+data+cache storage (package_name, total/app/data/cache bytes). Needs root (dumpsys diskstats).",
+        withDevice(
+            "\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1 to 30. Default 10.\"}",
+        ),
+        true, false, true, false, "query", "storage.top_apps",
+    ),
+    ToolDef(
         "shell_exec",
         "Execute a shell command on the device. Runs as the app user via 'sh -c' by default; set asRoot to run via 'su -c' when the device is rooted.",
         withDevice(

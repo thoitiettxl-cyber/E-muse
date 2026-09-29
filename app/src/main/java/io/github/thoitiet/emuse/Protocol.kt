@@ -41,6 +41,16 @@ object Cmds {
     const val UI_WAIT_PACKAGE = "ui.wait_package"
     const val INPUT_WAIT = "input.wait"
     const val SYSTEM_PANEL = "system.panel"
+    const val DEVICE_STATUS = "device.status"
+    const val NETWORK_INFO = "network.info"
+    const val VOLUME_GET = "volume.get"
+    const val VOLUME_SET = "volume.set"
+    const val MEDIA_CONTROL = "media.control"
+    const val ALARM_SET = "alarm.set"
+    const val TIMER_SET = "timer.set"
+    const val ALARM_LIST = "alarm.list"
+    const val MEMORY_TOP_APPS = "memory.top_apps"
+    const val STORAGE_TOP_APPS = "storage.top_apps"
 }
 
 data class DeviceCommand(val id: String, val cmd: String, val args: JSONObject) {

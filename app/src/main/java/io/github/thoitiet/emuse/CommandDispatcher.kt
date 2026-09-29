@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import io.github.thoitiet.emuse.exec.AppExecutor
 import io.github.thoitiet.emuse.exec.ClipboardExecutor
+import io.github.thoitiet.emuse.exec.DeviceExecutor
 import io.github.thoitiet.emuse.exec.FileExecutor
 import io.github.thoitiet.emuse.exec.InputExecutor
 import io.github.thoitiet.emuse.exec.ScreenExecutor
@@ -30,6 +31,7 @@ class CommandDispatcher(
     private val apps = AppExecutor(appCtx)
     private val files = FileExecutor(appCtx)
     private val clipboard = ClipboardExecutor(appCtx)
+    private val device = DeviceExecutor(appCtx)
 
     init {
         ShellExecutor.reset()
@@ -90,6 +92,16 @@ class CommandDispatcher(
             Cmds.UI_WAIT_PACKAGE -> a.optString("package_name")
             Cmds.UI_OBSERVE -> "screenshot=${a.optBoolean("include_screenshot", false)}"
             Cmds.DEVICE_CONTEXT -> ""
+            Cmds.DEVICE_STATUS -> ""
+            Cmds.NETWORK_INFO -> ""
+            Cmds.VOLUME_GET -> ""
+            Cmds.VOLUME_SET -> "${a.optString("stream")}=${a.optInt("percent")}%"
+            Cmds.MEDIA_CONTROL -> a.optString("action")
+            Cmds.ALARM_SET -> "${a.optInt("hour")}:${a.optInt("minute")}"
+            Cmds.TIMER_SET -> "${a.optInt("duration_seconds")}s"
+            Cmds.ALARM_LIST -> ""
+            Cmds.MEMORY_TOP_APPS -> "n=${a.optInt("limit", 10)}"
+            Cmds.STORAGE_TOP_APPS -> "n=${a.optInt("limit", 10)}"
             Cmds.INPUT_WAIT -> "${a.optInt("durationMs", 1_000)}ms"
             Cmds.SYSTEM_PANEL -> a.optString("panel")
             Cmds.INPUT_TEXT -> a.optString("text").take(20)
@@ -222,6 +234,31 @@ class CommandDispatcher(
             )
             Cmds.INPUT_WAIT -> SystemExecutor.waitMs(a.optInt("durationMs", 1_000))
             Cmds.SYSTEM_PANEL -> SystemExecutor.openPanel(a.getString("panel"))
+
+            Cmds.DEVICE_STATUS -> device.status()
+            Cmds.NETWORK_INFO -> device.networkInfo()
+            Cmds.VOLUME_GET -> device.getVolume()
+            Cmds.VOLUME_SET -> device.setVolume(
+                a.getString("stream"),
+                a.getInt("percent"),
+            )
+            Cmds.MEDIA_CONTROL -> device.mediaControl(a.getString("action"))
+            Cmds.ALARM_SET -> device.setAlarm(
+                a.getInt("hour"),
+                a.getInt("minute"),
+                a.optString("label").ifEmpty { null },
+                a.optBoolean("vibrate", true),
+                a.optJSONArray("repeat_days")?.let { arr ->
+                    (0 until arr.length()).map { arr.getString(it) }
+                },
+            )
+            Cmds.TIMER_SET -> device.setTimer(
+                a.getInt("duration_seconds"),
+                a.optString("label").ifEmpty { null },
+            )
+            Cmds.ALARM_LIST -> device.listAlarms()
+            Cmds.MEMORY_TOP_APPS -> device.topMemoryApps(a.optInt("limit", 10))
+            Cmds.STORAGE_TOP_APPS -> device.topStorageApps(a.optInt("limit", 10))
 
             else -> throw IllegalArgumentException("unknown cmd: ${cmd.cmd}")
         }

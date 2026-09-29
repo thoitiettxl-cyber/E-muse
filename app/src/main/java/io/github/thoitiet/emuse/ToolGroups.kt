@@ -59,6 +59,16 @@ val TOOL_GROUP_BY_NAME: Map<String, ToolGroup> = mapOf(
     // ---- device_direct ----
     "device_list" to ToolGroup.DEVICE_DIRECT,
     "device_info" to ToolGroup.DEVICE_DIRECT,
+    "device_status" to ToolGroup.DEVICE_DIRECT,
+    "network_info" to ToolGroup.DEVICE_DIRECT,
+    "get_volume" to ToolGroup.DEVICE_DIRECT,
+    "set_volume" to ToolGroup.DEVICE_DIRECT,
+    "media_control" to ToolGroup.DEVICE_DIRECT,
+    "set_alarm" to ToolGroup.DEVICE_DIRECT,
+    "set_timer" to ToolGroup.DEVICE_DIRECT,
+    "list_alarms" to ToolGroup.DEVICE_DIRECT,
+    "top_memory_apps" to ToolGroup.DEVICE_DIRECT,
+    "top_storage_apps" to ToolGroup.DEVICE_DIRECT,
     "app_list" to ToolGroup.DEVICE_DIRECT,
     "app_info" to ToolGroup.DEVICE_DIRECT,
     "wait" to ToolGroup.DEVICE_DIRECT,
@@ -133,6 +143,16 @@ val TOOL_NAME_BY_CMD: Map<String, String> = mapOf(
     Cmds.UI_WAIT_PACKAGE to "wait_for_package",
     Cmds.INPUT_WAIT to "wait",
     Cmds.SYSTEM_PANEL to "open_system_panel",
+    Cmds.DEVICE_STATUS to "device_status",
+    Cmds.NETWORK_INFO to "network_info",
+    Cmds.VOLUME_GET to "get_volume",
+    Cmds.VOLUME_SET to "set_volume",
+    Cmds.MEDIA_CONTROL to "media_control",
+    Cmds.ALARM_SET to "set_alarm",
+    Cmds.TIMER_SET to "set_timer",
+    Cmds.ALARM_LIST to "list_alarms",
+    Cmds.MEMORY_TOP_APPS to "top_memory_apps",
+    Cmds.STORAGE_TOP_APPS to "top_storage_apps",
 )
 
 /**
