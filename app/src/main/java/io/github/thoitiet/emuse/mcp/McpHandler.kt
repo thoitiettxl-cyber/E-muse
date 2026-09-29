@@ -234,6 +234,13 @@ class McpHandler(
                 val keys = set.keys()
                 while (keys.hasNext()) {
                     val k = keys.next()
+                    // "tool_flags" is the meta-tool itself: it is always
+                    // listed and its own flag is never consulted (the
+                    // `name == "tool_flags"` branch returns before the
+                    // disabled check), so persisting a value for it would
+                    // store state that contradicts behavior. Skip it: the
+                    // tool reports back unchanged.
+                    if (k == "tool_flags") continue
                     val v = set.opt(k)
                     if (v is Boolean) flags[k] = v
                 }
