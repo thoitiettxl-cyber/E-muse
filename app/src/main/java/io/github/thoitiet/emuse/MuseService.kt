@@ -45,6 +45,8 @@ class MuseService : Service() {
     private lateinit var dispatcher: CommandDispatcher
     private var ws: WebSocket? = null
     private var reconnectDelayMs = 5000L
+    private var connectGen = 0
+    private var socketOpen = false
     private var fgTypes = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
 
     override fun onCreate() {
@@ -118,20 +120,31 @@ class MuseService : Service() {
             updateNotification("E-Muse: chưa cấu hình URL / API key")
             return
         }
+        if (socketOpen && ws != null) return // already connected
         // https:// -> wss://, http:// -> ws://
         val wsUrl = httpUrl.replaceFirst("^http".toRegex(), "ws")
         updateNotification("E-Muse: đang kết nối…")
-        // Drop any previous socket: the Worker closes the older connection
-        // for the same deviceId, which would otherwise trigger a reconnect loop.
+        // Generation guard: cancelling the old socket fires its onFailure, whose
+        // callbacks must be ignored so they can't schedule phantom reconnects
+        // that would kill the healthy new socket (reconnect flap loop).
+        val gen = ++connectGen
         runCatching { ws?.cancel() }
         ws = null
+        socketOpen = false
         val request = Request.Builder().url(wsUrl).build()
-        ws = client.newWebSocket(request, listener)
+        ws = client.newWebSocket(request, SocketListener(gen))
     }
 
-    private val listener = object : WebSocketListener() {
+    private inner class SocketListener(private val gen: Int) : WebSocketListener() {
+        private fun alive() = gen == connectGen
+
         override fun onOpen(webSocket: WebSocket, response: Response) {
+            if (!alive()) {
+                runCatching { webSocket.cancel() }
+                return
+            }
             reconnectDelayMs = 5000L
+            socketOpen = true
             val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
             val hello = JSONObject()
                 .put("type", "hello")
@@ -145,6 +158,7 @@ class MuseService : Service() {
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
+            if (!alive()) return
             try {
                 val o = JSONObject(text)
                 if (o.has("cmd")) dispatcher.dispatch(DeviceCommand.fromJson(o))
@@ -153,24 +167,28 @@ class MuseService : Service() {
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            if (!alive()) return
+            socketOpen = false
             FloatingOverlay.setConnected(false)
-            scheduleReconnect()
+            scheduleReconnect(gen)
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            if (!alive()) return
+            socketOpen = false
             updateNotification("E-Muse: mất kết nối, thử lại…")
             FloatingOverlay.setConnected(false)
             FloatingOverlay.event("Mất kết nối: ${t.message?.take(40)}")
-            scheduleReconnect()
+            scheduleReconnect(gen)
         }
     }
 
-    private fun scheduleReconnect() {
+    private fun scheduleReconnect(gen: Int) {
         if (!running) return
         scope.launch {
             delay(reconnectDelayMs)
             reconnectDelayMs = min(reconnectDelayMs * 2, 60_000L)
-            if (running) connect()
+            if (running && gen == connectGen) connect()
         }
     }
 
