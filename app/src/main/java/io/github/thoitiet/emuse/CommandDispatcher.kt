@@ -26,6 +26,7 @@ class CommandDispatcher(
 ) {
     private val appCtx = ctx.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val prefs = Prefs(appCtx)
     private val apps = AppExecutor(appCtx)
     private val files = FileExecutor(appCtx)
     private val clipboard = ClipboardExecutor(appCtx)
@@ -43,6 +44,14 @@ class CommandDispatcher(
         cmd: DeviceCommand,
         timeoutMs: Long = 120_000,
     ): DeviceResult {
+        // Layer 2 of group gating (defense in depth; layer 1 is McpHandler).
+        // Unknown cmds keep their existing behavior (error from execute()).
+        val toolName = TOOL_NAME_BY_CMD[cmd.cmd]
+        if (toolName != null) {
+            groupBlockReason(toolName) { prefs.isGroupEnabled(it) }?.let { reason ->
+                return DeviceResult(cmd.id, false, error = reason)
+            }
+        }
         return try {
             val result = withTimeout(timeoutMs.coerceIn(1_000L, 120_000L)) { execute(cmd) }
             DeviceResult(cmd.id, true, result)

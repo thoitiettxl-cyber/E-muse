@@ -3,6 +3,8 @@ package io.github.thoitiet.emuse.mcp
 import io.github.thoitiet.emuse.CommandDispatcher
 import io.github.thoitiet.emuse.DeviceCommand
 import io.github.thoitiet.emuse.Prefs
+import io.github.thoitiet.emuse.ToolGroup
+import io.github.thoitiet.emuse.groupBlockReason
 import java.security.MessageDigest
 import java.util.UUID
 import org.json.JSONObject
@@ -145,6 +147,11 @@ class McpHandler(
                 rpcError(id, -32000, "Tool \"$name\" is disabled. Call tool_flags to see or change the enabled tools."),
             )
         }
+        // Layer 1 of group gating (layer 2 is in CommandDispatcher):
+        // a tool is blocked when EITHER its tool_flag or its group is off.
+        groupBlockReason(name) { prefs.isGroupEnabled(it) }?.let { reason ->
+            return HttpResult(200, rpcError(id, -32000, reason))
+        }
         return try {
             if (name == "device_list") {
                 return HttpResult(200, toolOk(id, org.json.JSONArray().put(deviceJson())))
@@ -241,7 +248,16 @@ class McpHandler(
                 .put("enabled", flags[t.name] != false)
                 .put("kind", t.kind))
         }
-        return JSONObject().put("tools", tools)
+        // Permission group switches (toggled in the app UI, not here).
+        val groups = org.json.JSONArray()
+        for (g in ToolGroup.entries) {
+            groups.put(JSONObject()
+                .put("id", g.name.lowercase())
+                .put("title", g.title)
+                .put("summary", g.summary)
+                .put("enabled", prefs.isGroupEnabled(g)))
+        }
+        return JSONObject().put("tools", tools).put("groups", groups)
     }
 
     private fun toolFlags(): Map<String, Boolean> {

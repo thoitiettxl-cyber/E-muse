@@ -43,4 +43,14 @@ class Prefs(ctx: Context) {
     var toolFlagsJson: String
         get() = sp.getString("tool_flags", "{}") ?: "{}"
         set(v) = sp.edit().putString("tool_flags", v).apply()
+
+    /**
+     * Permission group switches (see ToolGroup). Defaults: terminal_file
+     * and device_direct ON; sensitive_read and sensitive_action OFF.
+     */
+    fun isGroupEnabled(group: ToolGroup): Boolean =
+        sp.getBoolean(group.prefKey, group.defaultEnabled)
+
+    fun setGroupEnabled(group: ToolGroup, enabled: Boolean) =
+        sp.edit().putBoolean(group.prefKey, enabled).apply()
 }

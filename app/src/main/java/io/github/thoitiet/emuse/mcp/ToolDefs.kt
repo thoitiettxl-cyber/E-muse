@@ -381,7 +381,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "tool_flags",
-        "Get or change which E-muse tools are enabled. With no arguments, returns the on/off state of every tool. Pass {set: {shell_exec: false, file_push: false}} to disable tools, or {reset: true} to re-enable all. Disabled tools are hidden from tools/list and rejected on tools/call. This tool is always available and cannot be disabled.",
+        "Get or change which E-muse tools are enabled. With no arguments, returns the on/off state of every tool plus the four permission group switches (terminal_file, device_direct, sensitive_read, sensitive_action). Pass {set: {shell_exec: false, file_push: false}} to disable tools, or {reset: true} to re-enable all. Disabled tools are hidden from tools/list and rejected on tools/call. A tool is also blocked when its permission group is off (groups are toggled in the app UI, section \"Quyền tool\"). This tool is always available and cannot be disabled.",
         "{\"type\":\"object\",\"properties\":{" +
             "\"set\":{\"type\":\"object\",\"description\":\"Map of tool name to enabled flag, e.g. {shell_exec: false}.\",\"additionalProperties\":{\"type\":\"boolean\"}}," +
             "\"reset\":{\"type\":\"boolean\",\"description\":\"Re-enable every tool.\"}" +
