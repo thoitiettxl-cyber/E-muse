@@ -8,7 +8,7 @@ class Prefs(ctx: Context) {
     var workerUrl: String
         get() = sp.getString(
             "worker_url",
-            "https://e-muse-mcp.<account>.workers.dev/device/connect",
+            "https://e-muse-mcp.ngthanhhuy951.workers.dev/device/connect",
         ) ?: ""
         set(v) = sp.edit().putString("worker_url", v).apply()
 

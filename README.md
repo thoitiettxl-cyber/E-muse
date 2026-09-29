@@ -27,7 +27,7 @@ wrangler secret put EMUSE_API_KEY   # key bí mật, KHÔNG commit vào repo
 wrangler deploy --config wrangler.jsonc
 ```
 
-Kiểm tra: `GET https://e-muse-mcp.<account>.workers.dev/health` → `{"ok":true}`.
+Kiểm tra: `GET https://e-muse-mcp.ngthanhhuy951.workers.dev/health` → `{"ok":true}`.
 
 Các biến môi trường (vars trong `wrangler.jsonc`) để tắt nhanh khi cần:
 
@@ -48,7 +48,7 @@ gradle :app:assembleDebug
 
 Cài APK lên máy, mở app:
 
-1. Nhập **Worker URL**: `https://e-muse-mcp.<account>.workers.dev/device/connect`
+1. Nhập **Worker URL**: `https://e-muse-mcp.ngthanhhuy951.workers.dev/device/connect`
 2. Nhập **API key** (khớp với `EMUSE_API_KEY` đã put secret)
 3. Save → Start service
 4. (Khuyến nghị) bật Accessibility cho E-Muse để dùng tap/vuốt/gõ phím/đọc UI
@@ -62,7 +62,7 @@ Thêm vào MCP client (file `.mcp.json` mẫu có sẵn ở repo root):
 {
   "mcpServers": {
     "E-muse": {
-      "url": "https://e-muse-mcp.<account>.workers.dev/mcp",
+      "url": "https://e-muse-mcp.ngthanhhuy951.workers.dev/mcp",
       "protocolVersion": "2026-07-28",
       "headers": { "EMUSE_API_KEY": "${EMUSE_API_KEY}" }
     }
