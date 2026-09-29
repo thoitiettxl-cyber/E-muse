@@ -11,7 +11,9 @@ import org.json.JSONObject
  * Clipboard read/write plus Eta's paste_text. Paste requires the
  * accessibility service to confirm real input focus (Eta's policy):
  * the clipboard is set and ACTION_PASTE is performed on the focused
- * editable node. The clipboard is never modified when there is no focus.
+ * editable node. The clipboard is never modified when there is no focus,
+ * and a failed paste restores the previous clipboard content instead of
+ * leaving the new text behind.
  */
 class ClipboardExecutor(private val appCtx: Context) {
     companion object {
@@ -55,9 +57,19 @@ class ClipboardExecutor(private val appCtx: Context) {
                         "focused node is not editable; clipboard was not modified",
                     )
                 }
-                manager().setPrimaryClip(ClipData.newPlainText("emuse", text))
+                // ACTION_PASTE inserts the primary clip, so the clip must be
+                // set before performing it. On failure the previous content
+                // is restored: a failed paste must not leave the new text
+                // in the clipboard.
+                val cm = manager()
+                val previous = cm.primaryClip
+                cm.setPrimaryClip(ClipData.newPlainText("emuse", text))
                 if (!focused.performAction(AccessibilityNodeInfo.ACTION_PASTE)) {
-                    throw IllegalStateException("ACTION_PASTE failed on the focused field")
+                    if (previous != null) cm.setPrimaryClip(previous)
+                    else cm.clearPrimaryClip()
+                    throw IllegalStateException(
+                        "ACTION_PASTE failed on the focused field; clipboard restored",
+                    )
                 }
                 settleAfter("text")
                 return JSONObject().put("ok", true).put("chars", text.length)
