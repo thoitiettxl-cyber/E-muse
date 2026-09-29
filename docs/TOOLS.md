@@ -1,4 +1,4 @@
-# MCP Tools E-Muse (36)
+# MCP Tools E-Muse (39)
 
 Mọi tool (trừ `device_list`, `tool_flags`) đều có `deviceId` optional —
 bắt buộc khi có nhiều máy cùng kết nối.
@@ -7,12 +7,14 @@ bắt buộc khi có nhiều máy cùng kết nối.
 |---|---|---|---|
 | `device_list` | query | - | Liệt kê máy đang kết nối (serve local, 1 máy) |
 | `device_info` | query | - | Model, Android/SDK, root, accessibility, screen-capture |
+| `get_current_context` | query | - | Giờ, timezone, weekday, locale, last-known location (nếu đã có quyền) |
 | `shell_exec` | write | **yes** | Shell `sh -c`; `asRoot` → `su -c` (cần root) |
-| `app_list` | query | - | App đã cài (`system: true` để gồm system app) |
+| `app_list` | query | - | App đã cài (`system: true` để gồm system app; `query` để fuzzy-search theo tên, `limit` 1–20) |
 | `app_info` | query | - | Chi tiết 1 package |
 | `app_install` | write | **yes** | Cài APK base64 — hiện dialog xác nhận của hệ thống |
 | `app_uninstall` | write | **yes** | Gỡ app — hiện dialog xác nhận |
-| `app_start` | write | - | Mở app (package / action+uri+extras) |
+| `app_start` | write | - | Mở app (package / app_name fuzzy / action+uri+extras) |
+| `open_uri` | write | - | Mở URI bằng ACTION_VIEW (check scheme + app xử lý) |
 | `app_stop` | write | **yes** | Force-stop (cần root) |
 | `file_list` | query | - | Liệt kê thư mục |
 | `file_pull` | query | - | Đọc file → base64 (tối đa 10MB) |
@@ -39,6 +41,7 @@ bắt buộc khi có nhiều máy cùng kết nối.
 | `open_system_panel` | write | - | Mở notification shade / quick settings |
 | `ui_dump` | query | - | Cây UI dạng JSON (cần accessibility hoặc root) |
 | `ui_snapshot` | query | - | **List element gọn kiểu Eta/E-Jev** (id, text, desc, bounds) — cần accessibility; dùng id với `input_tap` thay vì đoán tọa độ |
+| `observe_screen` | query | - | **Composite 1 call**: UI tree (`observation_id` + elements, `max_nodes` 1–120) + screenshot optional (image block) |
 | `wait_for_text` | query | - | **Đợi text xuất hiện** (poll 350ms phía device, 1 call) — thay N turn poll thủ công |
 | `tool_flags` | query | - | **Xem/bật/tắt tool** — luôn khả dụng, không tắt được chính nó |
 

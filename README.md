@@ -90,18 +90,20 @@ curl -s https://<tunnel-url-của-bạn>/health
 # {"ok":true,"mode":"direct"}
 ```
 
-## Danh sách tools (36)
+## Danh sách tools (39)
 
 | Tool | Loại | Mô tả |
 |---|---|---|
 | `device_list` | query | Liệt kê máy đang kết nối |
 | `device_info` | query | Model, Android version, root, accessibility |
+| `get_current_context` | query | Giờ, timezone, weekday, locale, last-known location |
 | `shell_exec` | write | Chạy shell (`sh -c`, hoặc `su -c` nếu `asRoot`) |
-| `app_list` | query | Danh sách app đã cài |
+| `app_list` | query | Danh sách app đã cài (`query` fuzzy-search, `limit` 1–20) |
 | `app_info` | query | Chi tiết 1 package |
 | `app_install` | write | Cài APK (base64) — hiện dialog xác nhận |
 | `app_uninstall` | write | Gỡ app — hiện dialog xác nhận |
-| `app_start` | write | Mở app (package hoặc action/uri/extras) |
+| `app_start` | write | Mở app (package / app_name fuzzy / action+uri+extras) |
+| `open_uri` | write | Mở URI bằng ACTION_VIEW |
 | `app_stop` | write | Force-stop (cần root) |
 | `file_list` | query | Liệt kê thư mục |
 | `file_pull` | query | Đọc file → base64 (tối đa 10MB) |
@@ -128,6 +130,7 @@ curl -s https://<tunnel-url-của-bạn>/health
 | `open_system_panel` | write | Mở notification shade / quick settings |
 | `ui_dump` | query | Cây UI hiện tại (JSON) |
 | `ui_snapshot` | query | Danh sách element gọn nhẹ (id `e0…`, text, bounds) cho automation |
+| `observe_screen` | query | Composite 1 call: UI tree + screenshot optional (image block) |
 | `wait_for_text` | query | **Đợi text xuất hiện** (device poll, 1 call) |
 | `tool_flags` | query | Bật/tắt từng tool (không bao giờ bị tắt) |
 
