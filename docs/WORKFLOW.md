@@ -33,7 +33,7 @@ Xem checklist "Thêm tool mới" trong `AGENTS.md`, chi tiết protocol ở
 
 ## Bật/tắt tool (tool_flags)
 
-Mặc định full 21 tools. Khi chỉ cần một số:
+Mặc định full 77 tools. Khi chỉ cần một số:
 
 ```bash
 # Chỉ bật đọc + chụp màn hình, tắt hết write nguy hiểm
