@@ -102,6 +102,10 @@ class MuseAccessibilityService : AccessibilityService() {
 
     fun openQuickSettings(): Boolean = performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
 
+    /** Screen size from the service's display metrics; fallback when `wm size` fails. */
+    fun displaySize(): Pair<Int, Int> =
+        resources.displayMetrics.let { it.widthPixels to it.heightPixels }
+
     /**
      * Tracks the foreground package from window-state events (the config
      * enables typeAllMask). Used by wait_for_package; may lag briefly behind

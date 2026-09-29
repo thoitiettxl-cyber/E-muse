@@ -191,10 +191,17 @@ object UiSnapshotter {
         val duration = durationMs.coerceIn(300, 3_000)
         val node = cache[id]
         if (node != null) {
-            val ok = runCatching {
+            // Eta contract: performAction returning false = rejected (safe to
+            // fall back); THROWING = outcome unknown — never replay blindly.
+            val dispatch = runCatching {
                 node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
-            }.getOrDefault(false)
-            if (ok) {
+            }
+            if (dispatch.isFailure) {
+                return JSONObject()
+                    .put("ok", false).put("code", "ACTION_OUTCOME_UNKNOWN")
+                    .put("note", "node action threw; outcome unknown — re-observe before retrying, do NOT replay")
+            }
+            if (dispatch.getOrDefault(false)) {
                 settleAfter("long_press")
                 return JSONObject().put("ok", true).put("via", "node-long-click").put("id", id)
             }
@@ -231,8 +238,15 @@ object UiSnapshotter {
         }
         val node = cache[id]
         if (node != null) {
-            val ok = runCatching { node.performAction(action) }.getOrDefault(false)
-            if (ok) {
+            // False = rejected (safe to fall back); throwing = outcome unknown,
+            // never replay.
+            val dispatch = runCatching { node.performAction(action) }
+            if (dispatch.isFailure) {
+                return JSONObject()
+                    .put("ok", false).put("code", "ACTION_OUTCOME_UNKNOWN")
+                    .put("note", "node action threw; outcome unknown — re-observe before retrying, do NOT replay")
+            }
+            if (dispatch.getOrDefault(false)) {
                 settleAfter("swipe")
                 return JSONObject()
                     .put("ok", true).put("via", "node-scroll")
@@ -265,13 +279,20 @@ object UiSnapshotter {
         require(text.length <= 4_000) { "text too long (max 4000)" }
         val node = cache[id]
             ?: throw IllegalStateException("unknown element id: $id (take a fresh ui_snapshot first)")
-        val ok = runCatching {
+        // False = rejected (safe to report failure); throwing = outcome unknown,
+        // never replay.
+        val dispatch = runCatching {
             val args = Bundle().apply {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
             }
             node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-        }.getOrDefault(false)
-        if (!ok) throw IllegalStateException("ACTION_SET_TEXT failed on element $id")
+        }
+        if (dispatch.isFailure) {
+            return JSONObject()
+                .put("ok", false).put("code", "ACTION_OUTCOME_UNKNOWN")
+                .put("note", "node action threw; outcome unknown — re-observe before retrying, do NOT replay")
+        }
+        if (!dispatch.getOrDefault(false)) throw IllegalStateException("ACTION_SET_TEXT failed on element $id")
         settleAfter("text")
         return JSONObject().put("ok", true).put("via", "node-set-text").put("id", id)
     }

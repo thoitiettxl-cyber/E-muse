@@ -153,7 +153,14 @@ class McpHandler(
                 ?: return HttpResult(200, rpcError(id, -32601, "Unknown tool $name"))
             // deviceId is meaningless in direct mode (single device); drop it.
             val cmdArgs = JSONObject(args.toString()).also { it.remove("deviceId") }
-            val timeoutMs = cmdArgs.optLong("timeoutMs", 30_000).coerceIn(1_000L, 120_000L)
+            // Tools like `wait` take a duration arg (durationMs) distinct from
+            // the RPC timeout arg (timeoutMs): the command timeout must cover
+            // the requested duration, otherwise a maxed-out wait spuriously
+            // times out.
+            val timeoutMs = maxOf(
+                cmdArgs.optLong("timeoutMs", 30_000),
+                cmdArgs.optLong("durationMs", 0) + 5_000,
+            ).coerceIn(1_000L, 120_000L)
             val res = dispatcher.executeCommand(
                 DeviceCommand(UUID.randomUUID().toString(), cmd, cmdArgs),
                 timeoutMs,

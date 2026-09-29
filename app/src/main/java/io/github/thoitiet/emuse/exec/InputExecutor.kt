@@ -134,7 +134,11 @@ object InputExecutor {
      * (swipe down), left/right analogously.
      */
     fun scroll(direction: String): JSONObject {
-        val (w, h) = DeviceScreen.size()
+        var (w, h) = DeviceScreen.size()
+        if (w <= 0 || h <= 0) {
+            // `wm size` can fail; fall back to the accessibility display metrics.
+            service()?.displaySize()?.let { (sw, sh) -> w = sw; h = sh }
+        }
         if (w <= 0 || h <= 0) throw IllegalStateException("unknown screen size")
         return when (direction.lowercase()) {
             "down" -> swipe(w / 2, (h * 0.75).toInt(), w / 2, (h * 0.25).toInt(), 500)

@@ -258,7 +258,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         withDevice(
             "\"text\":{\"type\":\"string\",\"maxLength\":4000,\"description\":\"Replacement text, up to 4000 characters.\"}," +
                 "\"elementId\":{\"type\":\"string\",\"description\":\"Editable element id from ui_snapshot. Omit to use the focused field.\"}," +
-                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Required when elementId is set.\"}",
+                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Optional; when given and stale, nothing is replaced.\"}",
             "\"text\"",
         ),
         false, false, false, false, "write", "input.replace_text",
@@ -268,7 +268,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
         "Clear the currently focused field or a specified editable element (elementId from ui_snapshot). Requires accessibility. Pass observationId to reject stale screens.",
         withDevice(
             "\"elementId\":{\"type\":\"string\",\"description\":\"Editable element id from ui_snapshot. Omit to use the focused field.\"}," +
-                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Required when elementId is set.\"}",
+                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Optional; when given and stale, nothing is cleared.\"}",
         ),
         false, false, false, false, "write", "input.clear_text",
     ),
@@ -342,7 +342,7 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "open_system_panel",
-        "Open the notification shade or the quick settings panel. Prefers accessibility global actions; falls back to the statusbar shell command.",
+        "Open the notification shade or the quick settings panel. Prefers accessibility global actions; falls back to the statusbar shell command. Aliases 'notification'/'quicksettings'/'settings' are also accepted for quick_settings.",
         withDevice(
             "\"panel\":{\"type\":\"string\",\"enum\":[\"notifications\",\"quick_settings\"]}",
             "\"panel\"",

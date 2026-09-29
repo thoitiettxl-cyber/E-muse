@@ -7,8 +7,8 @@ import org.json.JSONObject
 /**
  * System-level waits and panel actions (Eta's wait / wait_for_package /
  * open_system_panel). No Android context needed: foreground-package
- * detection reads the accessibility service's tracked package first and
- * falls back to a root `dumpsys window` parse.
+ * detection consults both the accessibility service's tracked package and
+ * a root `dumpsys window` parse each poll iteration.
  */
 object SystemExecutor {
     private val FOCUS_PKG = Regex("""m(?:CurrentFocus|FocusedApp)=Window\{[^}]*\s([A-Za-z][\w]*(\.[\w]+)+)/""")
@@ -16,9 +16,16 @@ object SystemExecutor {
     /** Eta's wait: plain sleep so animations/network/page transitions can finish. */
     fun waitMs(durationMs: Int): JSONObject {
         val d = durationMs.coerceIn(100, 30_000)
+        val start = SystemClock.elapsedRealtime()
         try {
             Thread.sleep(d.toLong())
         } catch (_: InterruptedException) {
+            // Report what actually elapsed rather than the requested duration.
+            Thread.currentThread().interrupt()
+            return JSONObject()
+                .put("ok", true)
+                .put("duration_ms", (SystemClock.elapsedRealtime() - start).toInt())
+                .put("interrupted", true)
         }
         return JSONObject().put("ok", true).put("duration_ms", d)
     }
@@ -35,7 +42,9 @@ object SystemExecutor {
         var attempts = 0
         while (SystemClock.elapsedRealtime() < deadline) {
             attempts++
-            if (foregroundPackage() == target) {
+            // Eta checks both sources each iteration: the a11y-tracked package
+            // can lag (window-state events are best-effort).
+            if (trackedPackage() == target || dumpsysPackage() == target) {
                 return JSONObject()
                     .put("ok", true)
                     .put("package_name", target)
@@ -63,8 +72,10 @@ object SystemExecutor {
         }.put("panel", panel.lowercase())
     }
 
-    private fun foregroundPackage(): String? {
-        MuseAccessibilityService.instance?.foregroundPackage?.let { return it }
+    private fun trackedPackage(): String? =
+        MuseAccessibilityService.instance?.foregroundPackage
+
+    private fun dumpsysPackage(): String? {
         // Root fallback: parse the focused window out of dumpsys.
         val r = runCatching {
             ShellExecutor.exec(
