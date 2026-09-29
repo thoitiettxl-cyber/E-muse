@@ -98,6 +98,16 @@ object ShellExecutor {
         active.clear()
     }
 
+    /**
+     * Re-arm after [close]. A fresh CommandDispatcher (service restart in the
+     * same process) must call this, otherwise every exec returns
+     * "executor closed".
+     */
+    fun reset() {
+        closed.set(false)
+        rootCache = null
+    }
+
     private fun terminate(proc: Process) {
         if (proc.isAlive) {
             runCatching { proc.destroy() }

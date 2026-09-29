@@ -27,6 +27,7 @@ class CommandDispatcher(
     private val files = FileExecutor(appCtx)
 
     init {
+        ShellExecutor.reset()
         ScreenExecutor.configure(appCtx.resources.displayMetrics.densityDpi)
     }
 

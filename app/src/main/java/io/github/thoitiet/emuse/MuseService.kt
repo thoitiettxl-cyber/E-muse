@@ -64,7 +64,7 @@ class MuseService : Service() {
 
     override fun onDestroy() {
         running = false
-        dispatcher.shutdown()
+        runCatching { dispatcher.shutdown() }
         scope.cancel()
         try {
             ws?.close(1000, "service stopped")
