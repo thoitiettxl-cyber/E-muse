@@ -48,8 +48,10 @@ gradle :app:assembleDebug
 - `PackageInstaller.Session.commit()` cần `IntentSender`, không phải
   `PendingIntent` — bug compile từng nằm từ commit scaffold đầu tiên.
 - CI sign fail `KeytoolException: Get Key failed: Given final block not
-  properly padded` = `EMUSE_KEY_PASSWORD` trên GitHub lệch keystore local.
-  Set lại 4 secrets từ file local đã verify (`~/workspace/user/emuse-keystore/`).
+  properly padded` = `EMUSE_KEY_PASSWORD` sai. Keystore `emuse-release.keystore`
+  (PKCS12) được tạo với **key password = store password** (file `.key_pass` cũ
+  là stale, đã đồng bộ lại). Verify bằng Java `KeyStore.getKey("emuse", pass)`
+  — đúng cái Gradle làm; `keytool -list` chỉ check storepass nên không đủ.
   `PUT` secret trả 204 body rỗng — code phải tolerate.
 - Lấy CI log: `GET repos/.../actions/jobs/{job_id}/logs` với GitHub surrogate
   Bearer → bắt 302 Location → download trực tiếp **không kèm Authorization**
