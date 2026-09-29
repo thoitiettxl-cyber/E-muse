@@ -1,5 +1,6 @@
 package io.github.thoitiet.emuse.mcp
 
+import android.util.Log
 import io.github.thoitiet.emuse.CommandDispatcher
 import io.github.thoitiet.emuse.DeviceCommand
 import io.github.thoitiet.emuse.Prefs
@@ -20,6 +21,8 @@ class McpHandler(
     /** JSON describing this device for device_list. */
     private val deviceJson: () -> JSONObject,
 ) {
+    private val rateLimiter = RateLimiter(MAX_REQ_PER_MINUTE)
+
     data class HttpResult(
         val status: Int,
         val json: JSONObject?,
@@ -28,6 +31,8 @@ class McpHandler(
 
     companion object {
         const val PROTOCOL = "2026-07-28"
+        private const val TAG = "EmuseMcp"
+        private const val MAX_REQ_PER_MINUTE = 60
         private val SUPPORTED = setOf("2026-07-28", "2025-11-25", "2025-06-18")
         private const val MAX_BODY_BYTES = 1024 * 1024
 
@@ -68,16 +73,37 @@ class McpHandler(
                 mapOf("WWW-Authenticate" to "Bearer realm=\"mcp\""),
             )
         }
+        // Audit log: method/tool + timestamp only, never args (may be sensitive).
+        Log.i(TAG, "mcp_call method=${msg.optString("method")}${toolSuffix(msg)} ts=${System.currentTimeMillis()}")
+        if (!rateLimiter.allow(presentedKey(headers))) {
+            Log.w(TAG, "rate_limited ts=${System.currentTimeMillis()}")
+            val err = JSONObject()
+                .put("jsonrpc", "2.0")
+                .put("id", id ?: JSONObject.NULL)
+                .put("error", JSONObject().put("code", -32001).put("message", "rate_limited"))
+            return HttpResult(429, err)
+        }
         return dispatchRpc(msg, id)
     }
+
+    /** " tool=<name>" suffix for tools/call, "" otherwise. */
+    private fun toolSuffix(msg: JSONObject): String {
+        if (msg.optString("method") != "tools/call") return ""
+        val name = msg.optJSONObject("params")?.optString("name").orEmpty()
+        return if (name.isNotEmpty()) " tool=$name" else ""
+    }
+
+    /** The API key as presented by the client ("" when absent). */
+    private fun presentedKey(headers: Map<String, String>): String =
+        headers["emuse_api_key"]?.trim()?.takeIf { it.isNotEmpty() }
+            ?: headers["authorization"]?.trim()?.let {
+                if (it.startsWith("Bearer ", ignoreCase = true)) it.substring(7).trim() else ""
+            } ?: ""
 
     private fun validKey(headers: Map<String, String>): Boolean {
         val expected = prefs.apiKey.trim()
         if (expected.isEmpty()) return false
-        val presented = headers["emuse_api_key"]?.trim()?.takeIf { it.isNotEmpty() }
-            ?: headers["authorization"]?.trim()?.let {
-                if (it.startsWith("Bearer ", ignoreCase = true)) it.substring(7).trim() else ""
-            } ?: ""
+        val presented = presentedKey(headers)
         if (presented.isEmpty()) return false
         return MessageDigest.isEqual(
             presented.toByteArray(Charsets.UTF_8),
