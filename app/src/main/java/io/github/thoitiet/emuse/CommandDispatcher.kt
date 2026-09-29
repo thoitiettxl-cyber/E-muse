@@ -42,6 +42,7 @@ class CommandDispatcher(
 
     fun shutdown() {
         scope.cancel()
+        ShellExecutor.close()
     }
 
     private fun execute(cmd: DeviceCommand): Any? {
@@ -51,7 +52,7 @@ class CommandDispatcher(
             Cmds.SHELL_EXEC -> ShellExecutor.exec(
                 a.getString("command"),
                 a.optBoolean("asRoot", false),
-                (a.optLong("timeoutMs", 30_000) / 1000).coerceIn(1L, 120L),
+                a.optLong("timeoutMs", 30_000).coerceIn(1_000L, 120_000L),
             ).toJson()
 
             Cmds.APP_LIST -> apps.list(a.optBoolean("system", false))

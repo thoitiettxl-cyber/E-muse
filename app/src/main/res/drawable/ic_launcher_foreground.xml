@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stylized "M" spark mark for E-Muse -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,78 L28,40 L40,40 L54,60 L68,40 L80,40 L80,78 L68,78 L68,58 L54,76 L40,58 L40,78 Z" />
+    <path
+        android:fillColor="#7C6CFF"
+        android:pathData="M48,28 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+</vector>

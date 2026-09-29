@@ -112,11 +112,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        statusView.text = buildString {
-            appendLine("Service: ${if (MuseService.running) "đang chạy" else "đã dừng"}")
-            appendLine("Root: ${if (ShellExecutor.hasRoot()) "có" else "không"}")
-            appendLine("Accessibility: ${if (accessibilityOn()) "đã bật" else "chưa bật"}")
-        }
+        // Root check blocks for seconds: never run it on the UI thread.
+        Thread {
+            val root = ShellExecutor.hasRoot()
+            val acc = MuseAccessibilityService.instance != null || accessibilityOn()
+            runOnUiThread {
+                statusView.text = buildString {
+                    appendLine("Service: ${if (MuseService.running) "đang chạy" else "đã dừng"}")
+                    appendLine("Root: ${if (root) "có" else "không"}")
+                    appendLine("Accessibility: ${if (acc) "đã bật" else "chưa bật"}")
+                }
+            }
+        }.start()
     }
 
     private fun accessibilityOn(): Boolean {

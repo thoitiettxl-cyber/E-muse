@@ -106,8 +106,8 @@ class AppExecutor(private val ctx: Context) {
 
     fun stop(packageName: String): JSONObject {
         if (!ShellExecutor.hasRoot()) throw IllegalStateException("app.stop requires root")
-        val r = ShellExecutor.exec("am force-stop $packageName", asRoot = true)
-        if (r.exitCode != 0) throw IllegalStateException("force-stop failed: ${r.stderr.trim()}")
+        val r = ShellExecutor.exec(RootCommands.forceStop(packageName), asRoot = true)
+        if (!r.ok) throw IllegalStateException("force-stop failed: ${r.stderr.trim().take(200)}")
         return JSONObject().put("stopped", true)
     }
 

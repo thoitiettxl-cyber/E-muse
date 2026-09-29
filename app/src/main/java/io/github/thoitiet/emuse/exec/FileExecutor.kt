@@ -61,12 +61,11 @@ class FileExecutor(private val ctx: Context) {
             val tmp = File(ctx.cacheDir, "push_${System.currentTimeMillis()}.bin")
             try {
                 tmp.writeBytes(bytes)
-                val cmd = buildString {
-                    append("cp '${tmp.absolutePath}' '$path'")
-                    if (!mode.isNullOrEmpty()) append(" && chmod $mode '$path'")
-                }
-                val r = ShellExecutor.exec(cmd, asRoot = true)
-                if (r.exitCode != 0) throw IllegalStateException("root push failed: ${r.stderr.trim()}")
+                val r = ShellExecutor.exec(
+                    RootCommands.copyTo(tmp.absolutePath, path, mode),
+                    asRoot = true,
+                )
+                if (!r.ok) throw IllegalStateException("root push failed: ${r.stderr.trim().take(200)}")
             } finally {
                 tmp.delete()
             }
