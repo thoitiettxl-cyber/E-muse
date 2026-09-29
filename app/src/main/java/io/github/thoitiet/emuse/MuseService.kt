@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
+import org.json.JSONObject
 import io.github.thoitiet.emuse.exec.ScreenCapture
 import io.github.thoitiet.emuse.mcp.LocalHttpServer
 import io.github.thoitiet.emuse.mcp.McpHandler

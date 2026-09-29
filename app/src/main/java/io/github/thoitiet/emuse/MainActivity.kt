@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
             Configuration.UI_MODE_NIGHT_YES
     private val bg: Int get() = if (dark) 0xFF0D0D0D.toInt() else 0xFFF5F5F5.toInt()
     private val cardBg: Int get() = if (dark) 0xFF1C1C1E.toInt() else 0xFFFFFFFF.toInt()
-    private val text: Int get() = if (dark) 0xFFFFFFFF.toInt() else 0xFF1A1A1A.toInt()
+    private val fgColor: Int get() = if (dark) 0xFFFFFFFF.toInt() else 0xFF1A1A1A.toInt()
     private val secondary: Int get() = if (dark) 0xFF9E9E9E.toInt() else 0xFF8E8E93.toInt()
     private val divider: Int get() = if (dark) 0x14FFFFFF else 0x12000000
     private val accent: Int = 0xFF0B84FF.toInt()
@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
             text = "E-Muse"
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            setTextColor(text)
+            setTextColor(fgColor)
             setPadding(0, dp(24), 0, 0)
         })
         root.addView(TextView(this).apply {
@@ -324,7 +324,7 @@ class MainActivity : AppCompatActivity() {
         texts.addView(TextView(this).apply {
             text = title
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTextColor(text)
+            setTextColor(fgColor)
         })
         texts.addView(TextView(this).apply {
             text = summary
@@ -365,7 +365,7 @@ class MainActivity : AppCompatActivity() {
         texts.addView(TextView(this).apply {
             text = title
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTextColor(text)
+            setTextColor(fgColor)
         })
         texts.addView(TextView(this).apply {
             text = summary
@@ -389,7 +389,7 @@ class MainActivity : AppCompatActivity() {
         row.addView(TextView(this).apply {
             text = title
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTextColor(text)
+            setTextColor(fgColor)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         })
         row.addView(TextView(this).apply {
@@ -408,12 +408,12 @@ class MainActivity : AppCompatActivity() {
         col.addView(TextView(this).apply {
             text = title
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTextColor(text)
+            setTextColor(fgColor)
         })
         val et = EditText(this).apply {
             this.hint = hint
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(text)
+            setTextColor(fgColor)
             setHintTextColor(secondary)
             if (password) inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             background = null
