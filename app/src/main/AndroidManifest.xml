@@ -17,6 +17,10 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <!-- Floating "bóng nổi" overlay -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- app_install tool: PackageInstaller.Session.commit() throws SecurityException
+         on non-privileged apps without this (P4 lesson). Granted via
+         Settings -> Special app access -> Install unknown apps. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- P5 sensitive-read tools: all permissions declared upfront (dangerous
          ones are granted by the user in Settings; tools fail with a clear
