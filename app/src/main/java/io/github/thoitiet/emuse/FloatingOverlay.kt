@@ -10,6 +10,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -126,7 +127,7 @@ object FloatingOverlay {
             addView(inner, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(dotView)
-            setOnTouchListener(DragTouchListener({ wm }, { bubble }, { bubbleParams }))
+            setOnTouchListener(DragTouchListener(ctx, { wm }, { bubble }, { bubbleParams }))
             setOnClickListener { togglePanel() }
         }
     }
@@ -217,10 +218,12 @@ object FloatingOverlay {
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, toFloat(), ctx.resources.displayMetrics).toInt()
 
     private class DragTouchListener(
+        ctx: Context,
         private val getWm: () -> WindowManager?,
         private val getBubble: () -> FrameLayout?,
         private val getParams: () -> WindowManager.LayoutParams?,
     ) : View.OnTouchListener {
+        private val touchSlop = ViewConfiguration.get(ctx).scaledTouchSlop
         private var startX = 0
         private var startY = 0
         private var downRawX = 0f
@@ -238,7 +241,7 @@ object FloatingOverlay {
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (e.rawX - downRawX).toInt()
                     val dy = (e.rawY - downRawY).toInt()
-                    if (dx * dx + dy * dy > 100) moved = true
+                    if (dx * dx + dy * dy > touchSlop * touchSlop) moved = true
                     p.x = startX + dx
                     p.y = startY + dy
                     getWm()?.updateViewLayout(getBubble(), p)
