@@ -1,6 +1,7 @@
 package io.github.thoitiet.emuse.mcp
 
 import android.content.Context
+import android.os.Build
 import io.github.thoitiet.emuse.Prefs
 import java.io.File
 import java.net.HttpURLConnection
@@ -340,6 +341,13 @@ class TunnelManager(
     private fun killStaleTunnel() {
         val f = pidFile()
         if (!f.exists()) return
+        // ProcessHandle needs API 34 (minSdk=28): skip the stale reap on older
+        // devices instead of crashing with NoSuchMethodError (an Error, not
+        // caught by runCatching). The generation guard still prevents leaks.
+        if (Build.VERSION.SDK_INT < 34) {
+            runCatching { f.delete() }
+            return
+        }
         val pid = runCatching { f.readText().trim().toLong() }.getOrNull()
         if (pid == null) {
             runCatching { f.delete() }
