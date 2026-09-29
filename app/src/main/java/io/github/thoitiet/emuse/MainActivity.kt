@@ -20,6 +20,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -64,8 +65,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var accSummary: TextView
     private lateinit var shotSummary: TextView
     private val groupSwitches = mutableMapOf<ToolGroup, Switch>()
+    private val permRows = mutableListOf<PermRow>()
+    private lateinit var usageSummary: TextView
 
     private var updatingUi = false
+
+    companion object {
+        private const val REQ_RUNTIME_PERMS = 2
+    }
 
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -180,6 +187,66 @@ class MainActivity : AppCompatActivity() {
         }
         root.addView(permCard)
         root.addView(hintText("Tool bị chặn khi nhóm của nó tắt — kể cả khi tool_flags đang bật."))
+
+        // ---- section: Quyền Android (chọn rồi cấp, kiểu Eta) ----
+        root.addView(sectionTitle("Quyền Android"))
+        val runPermCard = card()
+        val perms = mutableListOf(
+            RuntimePerm("Danh bạ", arrayOf(Manifest.permission.READ_CONTACTS)),
+            RuntimePerm("Nhật ký cuộc gọi", arrayOf(Manifest.permission.READ_CALL_LOG)),
+            RuntimePerm("Tin nhắn SMS", arrayOf(Manifest.permission.READ_SMS)),
+            RuntimePerm("Lịch", arrayOf(Manifest.permission.READ_CALENDAR)),
+        )
+        if (Build.VERSION.SDK_INT >= 33) {
+            perms += RuntimePerm(
+                "Ảnh & video",
+                arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO),
+            )
+            perms += RuntimePerm(
+                "Nhạc & ghi âm",
+                arrayOf(Manifest.permission.READ_MEDIA_AUDIO),
+            )
+            perms += RuntimePerm(
+                "Thông báo",
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            )
+        } else {
+            perms += RuntimePerm(
+                "Tệp & media",
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            )
+        }
+        perms += RuntimePerm(
+            "Vị trí",
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ),
+        )
+        for (item in perms) {
+            permRows += checkRow(runPermCard, item.title, item)
+            runPermCard.addView(divider())
+        }
+        actionRow(runPermCard, "Truy cập dùng app", "", "Mở cài đặt") {
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        }
+        usageSummary = summaryOf(runPermCard)
+        root.addView(runPermCard)
+        val grantBtn = Button(this).apply {
+            text = "Cấp quyền đã chọn"
+            setOnClickListener { grantSelectedPerms() }
+        }
+        root.addView(LinearLayout(this).apply {
+            setPadding(dp(16), dp(8), dp(16), 0)
+            addView(
+                grantBtn,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        })
+        root.addView(hintText("Tick chọn các quyền cần, bấm nút để cấp một lần. Quyền hệ thống đặc biệt (dùng app) mở trang Cài đặt tương ứng."))
 
         // ---- section: Cloudflare Tunnel ----
         root.addView(sectionTitle("Cloudflare Tunnel"))
@@ -357,6 +424,34 @@ class MainActivity : AppCompatActivity() {
         return sw
     }
 
+    /** Row for the "chọn rồi cấp" runtime-permission picker: checkbox + title + status. */
+    private fun checkRow(parent: LinearLayout, title: String, item: RuntimePerm): PermRow {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        val box = CheckBox(this)
+        val texts = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        texts.addView(TextView(this).apply {
+            text = title
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setTextColor(fgColor)
+        })
+        val status = TextView(this).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            setTextColor(secondary)
+        }
+        texts.addView(status)
+        row.addView(box)
+        row.addView(texts)
+        parent.addView(row)
+        return PermRow(box, status, item)
+    }
+
     private fun summaryOf(card: LinearLayout): TextView {
         val row = card.getChildAt(card.childCount - 1) as LinearLayout
         return (row.getChildAt(0) as LinearLayout).getChildAt(1) as TextView
@@ -442,6 +537,54 @@ class MainActivity : AppCompatActivity() {
 
     // ---------- state ----------
 
+    private data class RuntimePerm(val title: String, val perms: Array<String>)
+    private data class PermRow(val box: CheckBox, val status: TextView, val item: RuntimePerm)
+
+    private fun isPermGranted(item: RuntimePerm): Boolean =
+        item.perms.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+
+    private fun usageAccessGranted(): Boolean {
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+        return appOps.checkOpNoThrow(
+            android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            packageName,
+        ) == android.app.AppOpsManager.MODE_ALLOWED
+    }
+
+    /** Eta-style "chọn rồi cấp": grant every checked-but-not-granted permission at once. */
+    private fun grantSelectedPerms() {
+        val wanted = permRows
+            .filter { it.box.isChecked && !isPermGranted(it.item) }
+            .flatMap { it.item.perms.toList() }
+            .distinct()
+            .toTypedArray()
+        if (wanted.isEmpty()) {
+            toast("Không có quyền nào cần cấp (đã đủ hoặc chưa tick chọn)")
+            return
+        }
+        ActivityCompat.requestPermissions(this, wanted, REQ_RUNTIME_PERMS)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_RUNTIME_PERMS) {
+            val granted = grantResults.count { it == PackageManager.PERMISSION_GRANTED }
+            toast("Đã cấp $granted/${permissions.size} quyền")
+            refresh()
+        }
+    }
+
+    private fun setCheck(box: CheckBox, checked: Boolean) {
+        updatingUi = true
+        box.isChecked = checked
+        updatingUi = false
+    }
+
     private fun setSwitch(sw: Switch, checked: Boolean) {
         updatingUi = true
         sw.isChecked = checked
@@ -484,6 +627,14 @@ class MainActivity : AppCompatActivity() {
 
                 accSummary.text = if (acc) "Đã bật" else "Chưa bật"
                 shotSummary.text = shot
+
+                // Android runtime permissions (chọn rồi cấp)
+                for (r in permRows) {
+                    val g = isPermGranted(r.item)
+                    r.status.text = if (g) "Đã cấp" else "Chưa cấp"
+                    if (g) setCheck(r.box, false)
+                }
+                usageSummary.text = if (usageAccessGranted()) "Đã cấp" else "Chưa cấp"
             }
         }.start()
     }
