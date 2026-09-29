@@ -2,7 +2,10 @@ package io.github.thoitiet.emuse
 
 import android.Manifest
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
@@ -27,6 +30,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var urlInput: EditText
     private lateinit var keyInput: EditText
     private lateinit var statusView: TextView
+    private lateinit var tunnelUrlView: TextView
+    private lateinit var tunnelBtn: Button
 
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -128,6 +133,37 @@ class MainActivity : AppCompatActivity() {
             }
         }
         statusView = TextView(this)
+        tunnelUrlView = TextView(this).apply {
+            text = ""
+            setTextIsSelectable(true)
+            setOnClickListener {
+                val url = text.toString()
+                if (url.startsWith("http")) {
+                    (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                        .setPrimaryClip(ClipData.newPlainText("tunnel", url))
+                    toast("Đã copy URL tunnel")
+                }
+            }
+        }
+        tunnelBtn = Button(this).apply {
+            setOnClickListener {
+                val prefs = Prefs(this@MainActivity)
+                val enable = !prefs.tunnelEnabled
+                // The toggle intent also (re)starts the service when needed.
+                ContextCompat.startForegroundService(
+                    this@MainActivity,
+                    Intent(this@MainActivity, MuseService::class.java)
+                        .setAction(MuseService.ACTION_SET_TUNNEL)
+                        .putExtra(MuseService.EXTRA_TUNNEL_ENABLED, enable),
+                )
+                toast(if (enable) "Đang bật tunnel (tải cloudflared lần đầu ~35MB)…" else "Đã tắt tunnel")
+                // The public URL arrives asynchronously; poll the status view.
+                tunnelUrlView.postDelayed({ refresh() }, 5000)
+                tunnelUrlView.postDelayed({ refresh() }, 15000)
+                tunnelUrlView.postDelayed({ refresh() }, 30000)
+                refresh()
+            }
+        }
 
         root.addView(label("Worker URL"))
         root.addView(urlInput)
@@ -141,6 +177,10 @@ class MainActivity : AppCompatActivity() {
         root.addView(acc)
         root.addView(projection)
         root.addView(overlayBtn)
+        root.addView(spacer(24))
+        root.addView(label("Cloudflare Tunnel (truy cập trực tiếp)"))
+        root.addView(tunnelBtn)
+        root.addView(tunnelUrlView)
         root.addView(spacer(24))
         root.addView(label("Trạng thái:"))
         root.addView(statusView)
@@ -169,13 +209,21 @@ class MainActivity : AppCompatActivity() {
         Thread {
             val root = ShellExecutor.hasRoot()
             val acc = MuseAccessibilityService.instance != null || accessibilityOn()
+            val prefs = Prefs(this@MainActivity)
             runOnUiThread {
                 statusView.text = buildString {
                     appendLine("Service: ${if (MuseService.running) "đang chạy" else "đã dừng"}")
                     appendLine("Root: ${if (root) "có" else "không"}")
                     appendLine("Accessibility: ${if (acc) "đã bật" else "chưa bật"}")
                     appendLine("Chụp màn hình: ${if (ScreenCapture.hasProjection()) "MediaProjection" else if (root) "root screencap" else "chưa có"}")
-                    appendLine("Bóng nổi: ${if (Prefs(this@MainActivity).overlayEnabled) "bật" else "tắt"}")
+                    appendLine("Bóng nổi: ${if (prefs.overlayEnabled) "bật" else "tắt"}")
+                    appendLine("MCP direct: 127.0.0.1:${prefs.mcpPort} ${if (MuseService.running) "(sẵn sàng)" else ""}")
+                }
+                tunnelBtn.text = "Tunnel: ${if (prefs.tunnelEnabled) "tắt" else "bật"}"
+                tunnelUrlView.text = when {
+                    prefs.tunnelUrl.isNotEmpty() -> "URL: ${prefs.tunnelUrl}\n(bấm để copy)"
+                    prefs.tunnelEnabled -> "Đang tạo tunnel…"
+                    else -> "Tunnel đang tắt"
                 }
             }
         }.start()

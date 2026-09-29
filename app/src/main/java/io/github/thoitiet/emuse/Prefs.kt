@@ -19,4 +19,24 @@ class Prefs(ctx: Context) {
     var overlayEnabled: Boolean
         get() = sp.getBoolean("overlay_enabled", false)
         set(v) = sp.edit().putBoolean("overlay_enabled", v).apply()
+
+    /** Direct mode: expose the on-device MCP server via Cloudflare Tunnel. */
+    var tunnelEnabled: Boolean
+        get() = sp.getBoolean("tunnel_enabled", false)
+        set(v) = sp.edit().putBoolean("tunnel_enabled", v).apply()
+
+    /** Last public tunnel URL (quick tunnels change on every start). */
+    var tunnelUrl: String
+        get() = sp.getString("tunnel_url", "") ?: ""
+        set(v) = sp.edit().putString("tunnel_url", v).apply()
+
+    /** Local MCP server port (localhost only). */
+    var mcpPort: Int
+        get() = sp.getInt("mcp_port", 18789)
+        set(v) = sp.edit().putInt("mcp_port", v).apply()
+
+    /** Per-tool on/off flags for the direct endpoint (JSON object). */
+    var toolFlagsJson: String
+        get() = sp.getString("tool_flags", "{}") ?: "{}"
+        set(v) = sp.edit().putString("tool_flags", v).apply()
 }

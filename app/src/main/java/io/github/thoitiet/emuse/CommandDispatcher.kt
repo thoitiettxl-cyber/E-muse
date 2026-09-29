@@ -37,17 +37,28 @@ class CommandDispatcher(
         scope.launch {
             val started = System.currentTimeMillis()
             onEvent("▶ ${cmd.cmd}${shortArgs(cmd)}")
-            val res = try {
-                val result = withTimeout(120_000) { execute(cmd) }
-                DeviceResult(cmd.id, true, result)
-            } catch (e: TimeoutCancellationException) {
-                DeviceResult(cmd.id, false, error = "command timed out after 120s")
-            } catch (e: Exception) {
-                DeviceResult(cmd.id, false, error = e.message ?: e.javaClass.simpleName)
-            }
+            val res = executeCommand(cmd)
             val ms = System.currentTimeMillis() - started
             onEvent(if (res.ok) "✓ ${cmd.cmd} (${ms}ms)" else "✗ ${cmd.cmd}: ${res.error?.take(60)}")
             send(res)
+        }
+    }
+
+    /**
+     * Synchronous variant for the on-device MCP server: runs the command and
+     * returns its result instead of routing it through [send].
+     */
+    suspend fun executeCommand(
+        cmd: DeviceCommand,
+        timeoutMs: Long = 120_000,
+    ): DeviceResult {
+        return try {
+            val result = withTimeout(timeoutMs.coerceIn(1_000L, 120_000L)) { execute(cmd) }
+            DeviceResult(cmd.id, true, result)
+        } catch (e: TimeoutCancellationException) {
+            DeviceResult(cmd.id, false, error = "command timed out after ${timeoutMs}ms")
+        } catch (e: Exception) {
+            DeviceResult(cmd.id, false, error = e.message ?: e.javaClass.simpleName)
         }
     }
 
