@@ -43,6 +43,18 @@ object ScreenCapture {
 
     fun hasProjection(): Boolean = projection != null
 
+    /**
+     * Stop the held MediaProjection and drop all related state. Call when the
+     * service is destroyed so the system token is not held after ACTION_STOP.
+     */
+    fun release() {
+        try {
+            projection?.stop()
+        } catch (_: Exception) {
+        }
+        projection = null
+    }
+
     fun capturePng(width: Int, height: Int, densityDpi: Int): ByteArray? {
         val proj = projection ?: return null
         if (width <= 0 || height <= 0) return null

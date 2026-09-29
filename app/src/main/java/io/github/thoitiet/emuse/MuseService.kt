@@ -42,7 +42,6 @@ class MuseService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dispatcher: CommandDispatcher
-    private var mcpHandler: McpHandler? = null
     private var localServer: LocalHttpServer? = null
     private var tunnel: TunnelManager? = null
     private var fgTypes = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
@@ -64,7 +63,6 @@ class MuseService : Service() {
     private fun startDirectEndpoint() {
         val prefs = Prefs(this)
         val handler = McpHandler(dispatcher, prefs) { directDeviceJson() }
-        mcpHandler = handler
         val port = prefs.mcpPort
         try {
             localServer = LocalHttpServer(port) { method, path, headers, body ->
@@ -115,7 +113,6 @@ class MuseService : Service() {
         tunnel = null
         runCatching { localServer?.stop() }
         localServer = null
-        mcpHandler = null
     }
 
     /** Toggle the tunnel at runtime (called from MainActivity). */
@@ -189,19 +186,18 @@ class MuseService : Service() {
     override fun onDestroy() {
         running = false
         FloatingOverlay.hide()
-        runCatching { dispatcher.shutdown() }
+        ScreenCapture.release()
+        if (::dispatcher.isInitialized) runCatching { dispatcher.shutdown() }
         stopDirectEndpoint()
         scope.cancel()
         super.onDestroy()
     }
 
     private fun createChannel() {
-        if (Build.VERSION.SDK_INT >= 26) {
-            val mgr = getSystemService(NotificationManager::class.java)
-            mgr.createNotificationChannel(
-                NotificationChannel("emuse", "E-Muse", NotificationManager.IMPORTANCE_LOW),
-            )
-        }
+        val mgr = getSystemService(NotificationManager::class.java)
+        mgr.createNotificationChannel(
+            NotificationChannel("emuse", "E-Muse", NotificationManager.IMPORTANCE_LOW),
+        )
     }
 
     private fun buildNotification(text: String): Notification =
