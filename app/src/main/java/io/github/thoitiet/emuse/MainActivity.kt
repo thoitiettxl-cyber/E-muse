@@ -267,7 +267,7 @@ class MainActivity : AppCompatActivity() {
         if (::tunnelTokenInput.isInitialized) prefs.tunnelToken = tunnelTokenInput.text.toString().trim()
         if (::tunnelHostInput.isInitialized) {
             prefs.tunnelHostname = tunnelHostInput.text.toString().trim()
-                .ifEmpty { "mcp.khosihuythao.com" }
+                .ifEmpty { "" }
         }
     }
 

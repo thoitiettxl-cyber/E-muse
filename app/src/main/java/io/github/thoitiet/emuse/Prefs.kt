@@ -31,7 +31,7 @@ class Prefs(ctx: Context) {
 
     /** Fixed public hostname for named-tunnel mode. */
     var tunnelHostname: String
-        get() = sp.getString("tunnel_hostname", "mcp.khosihuythao.com") ?: ""
+        get() = sp.getString("tunnel_hostname", "") ?: ""
         set(v) = sp.edit().putString("tunnel_hostname", v).apply()
 
     /** Local MCP server port (localhost only). */
