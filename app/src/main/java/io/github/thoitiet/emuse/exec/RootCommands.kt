@@ -63,24 +63,19 @@ object RootCommands {
 }
 
 /**
- * Cached screen dimensions (Eta's RootShellDeviceController.screenSize),
- * used to validate tap/swipe coordinates before dispatching.
+ * Screen dimensions (Eta's RootShellDeviceController.screenSize), used to
+ * validate tap/swipe coordinates before dispatching. Deliberately not cached:
+ * a rotation would leave validatePoint checking against a stale size.
  */
 object DeviceScreen {
-    @Volatile
-    private var cached: Pair<Int, Int>? = null
-
     fun size(): Pair<Int, Int> {
-        cached?.let { return it }
         val m = Regex("""(\d+)x(\d+)""")
             .find(ShellExecutor.exec(RootCommands.screenSize()).stdout)
-        val size = if (m != null) {
+        return if (m != null) {
             Pair(m.groupValues[1].toInt(), m.groupValues[2].toInt())
         } else {
             Pair(0, 0)
         }
-        cached = size
-        return size
     }
 
     fun validatePoint(x: Int, y: Int) {
@@ -90,10 +85,6 @@ object DeviceScreen {
                 "coordinates out of bounds: ($x,$y) not in ${w}x$h"
             }
         }
-    }
-
-    fun invalidate() {
-        cached = null
     }
 }
 
