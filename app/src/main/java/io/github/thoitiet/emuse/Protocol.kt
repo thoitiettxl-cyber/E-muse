@@ -18,11 +18,13 @@ object Cmds {
     const val FILE_DELETE = "file.delete"
     const val SCREEN_CAPTURE = "screen.capture"
     const val INPUT_TAP = "input.tap"
+    const val INPUT_TAP_OBSERVE = "input.tap_observe"
     const val INPUT_SWIPE = "input.swipe"
     const val INPUT_KEY = "input.key"
     const val INPUT_TEXT = "input.text"
     const val UI_DUMP = "ui.dump"
     const val UI_SNAPSHOT = "ui.snapshot"
+    const val UI_WAIT_TEXT = "ui.wait_text"
 }
 
 data class DeviceCommand(val id: String, val cmd: String, val args: JSONObject) {

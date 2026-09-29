@@ -64,6 +64,8 @@ class CommandDispatcher(
             Cmds.APP_START -> a.optString("package").ifEmpty { a.optString("action") }
             Cmds.FILE_LIST, Cmds.FILE_PULL, Cmds.FILE_PUSH, Cmds.FILE_DELETE -> a.optString("path")
             Cmds.INPUT_TAP -> "(${a.optInt("x")}, ${a.optInt("y")})"
+            Cmds.INPUT_TAP_OBSERVE -> "element=${a.optString("elementId")}"
+            Cmds.UI_WAIT_TEXT -> a.optString("text").take(20)
             Cmds.INPUT_TEXT -> a.optString("text").take(20)
             Cmds.INPUT_KEY -> "keyCode=${a.optInt("keyCode")}"
             else -> ""
@@ -106,9 +108,14 @@ class CommandDispatcher(
 
             Cmds.INPUT_TAP -> {
                 val elementId = a.optString("elementId").ifEmpty { null }
-                if (elementId != null) UiSnapshotter.tapElement(elementId)
+                val obsId = a.optString("observationId").ifEmpty { null }
+                if (elementId != null) UiSnapshotter.tapElement(elementId, obsId)
                 else InputExecutor.tap(a.getInt("x"), a.getInt("y"))
             }
+            Cmds.INPUT_TAP_OBSERVE -> UiSnapshotter.tapAndObserve(
+                a.getString("elementId"),
+                a.optString("observationId").ifEmpty { null },
+            )
             Cmds.INPUT_SWIPE -> InputExecutor.swipe(
                 a.getInt("x1"), a.getInt("y1"),
                 a.getInt("x2"), a.getInt("y2"),
@@ -118,7 +125,15 @@ class CommandDispatcher(
             Cmds.INPUT_TEXT -> InputExecutor.text(a.getString("text"))
 
             Cmds.UI_DUMP -> UiDumpExecutor.dump()
-            Cmds.UI_SNAPSHOT -> UiSnapshotter.snapshot()
+            Cmds.UI_SNAPSHOT -> UiSnapshotter.snapshot(
+                query = a.optString("query").ifEmpty { null },
+                compact = a.optBoolean("compact", false),
+                maxNodes = a.optInt("maxNodes", 500),
+            )
+            Cmds.UI_WAIT_TEXT -> UiSnapshotter.waitForText(
+                a.getString("text"),
+                a.optLong("timeoutMs", 10_000L),
+            )
 
             else -> throw IllegalArgumentException("unknown cmd: ${cmd.cmd}")
         }

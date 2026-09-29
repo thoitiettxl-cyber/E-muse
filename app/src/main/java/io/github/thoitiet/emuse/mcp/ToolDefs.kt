@@ -1,10 +1,10 @@
 package io.github.thoitiet.emuse.mcp
 
 /**
- * MCP tool definitions served by the on-device direct endpoint.
- * Must stay in sync with workers/mcp/tools.ts (same names, descriptions,
- * input schemas and annotations) so MCP clients work unchanged against
- * either the Worker relay or the direct tunnel URL.
+ * MCP tool definitions served by the on-device direct endpoint
+ * (Cloudflare Tunnel -> 127.0.0.1:18789). The Cloudflare Worker relay was
+ * removed; this file is the single source of truth for tool names, schemas
+ * and annotations.
  */
 
 data class ToolDef(
@@ -153,13 +153,24 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "input_tap",
-        "Tap a UI element or a screen point. Preferred: pass elementId from ui_snapshot (taps the live accessibility node directly, no coordinate guessing). Fallback: x + y in pixels.",
+        "Tap a UI element or a screen point. Preferred: pass elementId from ui_snapshot (taps the live accessibility node directly, no coordinate guessing). Fallback: x + y in pixels. Pass observationId from the ui_snapshot you acted on: if the screen changed since, the tap is rejected with STALE_OBSERVATION instead of tapping the wrong element.",
         withDevice(
             "\"elementId\":{\"type\":\"string\",\"description\":\"Element id from ui_snapshot (e.g. \\\"e12\\\").\"}," +
+                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Optional; when given and stale, the tap is rejected.\"}," +
                 "\"x\":{\"type\":\"number\",\"description\":\"X coordinate in pixels.\"}," +
                 "\"y\":{\"type\":\"number\",\"description\":\"Y coordinate in pixels.\"}",
         ),
         false, false, false, false, "write", "input.tap",
+    ),
+    ToolDef(
+        "tap_and_observe",
+        "Tap a UI element and get a fresh ui_snapshot in ONE call: tap -> device settles -> new snapshot, all in the same response. This replaces the 3-turn pattern (ui_snapshot -> input_tap -> ui_snapshot). Returns {tap: {...}, snapshot: {observation_id, count, elements}}.",
+        withDevice(
+            "\"elementId\":{\"type\":\"string\",\"description\":\"Element id from ui_snapshot (e.g. \\\"e12\\\").\"}," +
+                "\"observationId\":{\"type\":\"string\",\"description\":\"observation_id from the ui_snapshot this element came from. Optional; when given and stale, nothing is tapped.\"}",
+            "\"elementId\"",
+        ),
+        false, false, false, false, "write", "input.tap_observe",
     ),
     ToolDef(
         "input_swipe",
@@ -198,9 +209,23 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "ui_snapshot",
-        "Compact UI snapshot (Eta-style): flat list of on-screen elements with stable ids, text, content description, bounds and clickable/editable/scrollable flags. Noise nodes are filtered on-device. Use the ids with input_tap elementId instead of guessing coordinates.",
-        withDevice(""),
+        "Compact UI snapshot (Eta-style): flat list of on-screen elements with stable ids, text, content description, bounds and clickable/editable/scrollable flags. Noise nodes are filtered on-device. Every snapshot mints an observation_id — pass it as observationId to input_tap/tap_and_observe so a tap on a changed screen is rejected instead of hitting the wrong element. Use the ids with input_tap elementId instead of guessing coordinates. Keep snapshots small with query/compact to avoid truncated output.",
+        withDevice(
+            "\"query\":{\"type\":\"string\",\"description\":\"Only return elements whose text or description contains this string (case-insensitive).\"}," +
+                "\"compact\":{\"type\":\"boolean\",\"description\":\"Omit element bounds to shrink the response. Default false.\"}," +
+                "\"maxNodes\":{\"type\":\"number\",\"description\":\"Max elements to walk (1-2000). Default 500.\"}",
+        ),
         true, false, true, false, "query", "ui.snapshot",
+    ),
+    ToolDef(
+        "wait_for_text",
+        "Wait until a text appears anywhere in the accessibility tree (e.g. after tapping something that loads). The device polls every 350ms and returns in ONE call — no manual snapshot polling. Matching is case-insensitive and diacritic-safe for Vietnamese.",
+        withDevice(
+            "\"text\":{\"type\":\"string\",\"description\":\"Text to wait for.\"}," +
+                "\"timeoutMs\":{\"type\":\"number\",\"description\":\"Max wait in ms (1000-60000). Default 10000.\"}",
+            "\"text\"",
+        ),
+        true, false, true, false, "query", "ui.wait_text",
     ),
     ToolDef(
         "tool_flags",
