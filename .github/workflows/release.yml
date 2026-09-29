@@ -1,0 +1,75 @@
+name: Build release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag for GitHub Release (leave empty to only upload artifact)"
+        required: false
+        default: ""
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install platform and build-tools
+        run: sdkmanager --install "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Restore release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
+          cat > app/keystore.properties <<EOF
+          storeFile=app/release.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Build signed release APK
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.10.2
+          arguments: :app:assembleRelease --no-daemon
+
+      - name: Name the APK
+        id: apk
+        run: |
+          APK=$(ls app/build/outputs/apk/release/app-release.apk)
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          OUT="E-Muse_v${VERSION}.apk"
+          cp "$APK" "$OUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: E-Muse-release-apk
+          path: ${{ steps.apk.outputs.path }}
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release_tag }}
+          name: E-Muse ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release_tag }}
+          files: ${{ steps.apk.outputs.path }}

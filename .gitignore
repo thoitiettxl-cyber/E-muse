@@ -3,3 +3,8 @@ node_modules/
 dist/
 *.log
 .DS_Store
+
+# Release signing (CI writes these from GitHub Secrets)
+app/keystore.properties
+app/release.keystore
+*.keystore
