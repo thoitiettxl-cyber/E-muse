@@ -1,4 +1,4 @@
-# MCP Tools E-Muse (39)
+# MCP Tools E-Muse (49)
 
 Mọi tool (trừ `device_list`, `tool_flags`) đều có `deviceId` optional —
 bắt buộc khi có nhiều máy cùng kết nối.
@@ -7,6 +7,16 @@ bắt buộc khi có nhiều máy cùng kết nối.
 |---|---|---|---|
 | `device_list` | query | - | Liệt kê máy đang kết nối (serve local, 1 máy) |
 | `device_info` | query | - | Model, Android/SDK, root, accessibility, screen-capture |
+| `device_status` | query | - | Pin (%/sạc), RAM (còn/tổng), bộ nhớ (còn/tổng), version, security patch, uptime |
+| `network_info` | query | - | Kết nối (connected/validated/metered), transports, Wi-Fi (SSID/RSSI khi thấy) |
+| `get_volume` | query | - | Mức âm lượng mọi stream (media/alarm/ring/notification) |
+| `set_volume` | write | - | Đặt âm lượng stream theo % (0 = tắt tiếng) |
+| `media_control` | write | - | Phím media: play/pause/play_pause/next/previous/stop |
+| `set_alarm` | write | - | Đặt báo thức hệ thống (giờ/phút, label, vibrate, repeat_days) |
+| `set_timer` | write | - | Đặt timer hệ thống (1–86400 giây) |
+| `list_alarms` | query | - | Báo thức hệ thống kế tiếp (full listing cần DB clock app — P7) |
+| `top_memory_apps` | query | - | Process tốn RAM nhất (root `ps`, fallback ActivityManager) |
+| `top_storage_apps` | query | - | App tốn bộ nhớ nhất (cần root `dumpsys diskstats`) |
 | `get_current_context` | query | - | Giờ, timezone, weekday, locale, last-known location (nếu đã có quyền) |
 | `shell_exec` | write | **yes** | Shell `sh -c`; `asRoot` → `su -c` (cần root) |
 | `app_list` | query | - | App đã cài (`system: true` để gồm system app; `query` để fuzzy-search theo tên, `limit` 1–20) |
@@ -82,7 +92,7 @@ Hai nhóm nhạy cảm mặc định TẮT; bật trong app (mục "Quyền tool
 | Nhóm | Mặc định | Tools |
 |---|---|---|
 | `terminal_file` | Bật | `shell_exec`, `file_list`, `file_pull`, `file_push`, `file_delete` |
-| `device_direct` | Bật | `device_list`, `device_info`, `app_list`, `app_info`, `wait`, `wait_for_text`, `wait_for_package` |
+| `device_direct` | Bật | `device_list`, `device_info`, `device_status`, `network_info`, `get_volume`, `set_volume`, `media_control`, `set_alarm`, `set_timer`, `list_alarms`, `top_memory_apps`, `top_storage_apps`, `app_list`, `app_info`, `wait`, `wait_for_text`, `wait_for_package` |
 | `sensitive_read` | Tắt | `get_current_context`, `set_clipboard`, `get_clipboard`, `screen_capture`, `ui_dump`, `ui_snapshot`, `observe_screen` |
 | `sensitive_action` | Tắt | `app_install`, `app_uninstall`, `app_start`, `app_stop`, `open_uri`, `input_tap`, `tap_and_observe`, `input_swipe`, `tap_area`, `long_press`, `long_press_element`, `scroll`, `scroll_element`, `input_key`, `input_text`, `replace_text`, `clear_text`, `paste_text`, `open_system_panel` |
 

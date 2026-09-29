@@ -90,12 +90,22 @@ curl -s https://<tunnel-url-của-bạn>/health
 # {"ok":true,"mode":"direct"}
 ```
 
-## Danh sách tools (39)
+## Danh sách tools (49)
 
 | Tool | Loại | Mô tả |
 |---|---|---|
 | `device_list` | query | Liệt kê máy đang kết nối |
 | `device_info` | query | Model, Android version, root, accessibility |
+| `device_status` | query | Pin, RAM, bộ nhớ, version, uptime |
+| `network_info` | query | Trạng thái mạng, transports, Wi-Fi (SSID/RSSI) |
+| `get_volume` | query | Mức âm lượng mọi stream |
+| `set_volume` | write | Đặt âm lượng stream theo % |
+| `media_control` | write | Phím media (play/pause/next/previous/stop) |
+| `set_alarm` | write | Đặt báo thức hệ thống |
+| `set_timer` | write | Đặt timer hệ thống |
+| `list_alarms` | query | Báo thức hệ thống kế tiếp |
+| `top_memory_apps` | query | Process tốn RAM nhất |
+| `top_storage_apps` | query | App tốn bộ nhớ nhất (cần root) |
 | `get_current_context` | query | Giờ, timezone, weekday, locale, last-known location |
 | `shell_exec` | write | Chạy shell (`sh -c`, hoặc `su -c` nếu `asRoot`) |
 | `app_list` | query | Danh sách app đã cài (`query` fuzzy-search, `limit` 1–20) |
