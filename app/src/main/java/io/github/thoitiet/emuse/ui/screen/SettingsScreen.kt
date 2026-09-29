@@ -1,5 +1,6 @@
 package io.github.thoitiet.emuse.ui.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,10 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.Dp
@@ -47,6 +52,12 @@ fun SettingsScreen(
     onTunnelUrlClick: () -> Unit,
     bottomPadding: Dp = 0.dp,
 ) {
+    // Miuix TextField uses value/onValueChange (not TextFieldState).
+    // Keep local String state synced with the Activity's TextFieldState.
+    var apiKeyText by remember { mutableStateOf(uiState.apiKey) }
+    var tunnelTokenText by remember { mutableStateOf(uiState.tunnelToken) }
+    var tunnelHostText by remember { mutableStateOf(uiState.tunnelHostname) }
+
     // Sync initial values from uiState (only on first composition).
     LaunchedEffect(Unit) {
         if (apiKeyState.text.isEmpty() && uiState.apiKey.isNotEmpty()) {
@@ -58,6 +69,10 @@ fun SettingsScreen(
         if (tunnelHostState.text.isEmpty() && uiState.tunnelHostname.isNotEmpty()) {
             tunnelHostState.edit { append(uiState.tunnelHostname) }
         }
+        // Initialize local states from TextFieldState (in case Activity pre-filled).
+        apiKeyText = apiKeyState.text.toString()
+        tunnelTokenText = tunnelTokenState.text.toString()
+        tunnelHostText = tunnelHostState.text.toString()
     }
 
     LazyColumn(
@@ -85,8 +100,13 @@ fun SettingsScreen(
                         modifier = Modifier.padding(bottom = 8.dp),
                     )
                     TextField(
-                        state = apiKeyState,
+                        value = apiKeyText,
+                        onValueChange = {
+                            apiKeyText = it
+                            apiKeyState.edit { replace(0, length, it) }
+                        },
                         modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
                     )
                     Text(
                         text = "EMUSE_API_KEY — guard cho MCP endpoint",
@@ -133,9 +153,9 @@ fun SettingsScreen(
                             text = "URL: ${uiState.tunnelUrl}\n(bấm để copy)",
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clickable(onClick = onTunnelUrlClick)
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             color = MiuixTheme.colorScheme.primary,
-                            onClick = onTunnelUrlClick,
                         )
                     }
                     Column(
@@ -148,7 +168,11 @@ fun SettingsScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
                         )
                         TextField(
-                            state = tunnelTokenState,
+                            value = tunnelTokenText,
+                            onValueChange = {
+                                tunnelTokenText = it
+                                tunnelTokenState.edit { replace(0, length, it) }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
@@ -161,7 +185,11 @@ fun SettingsScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
                         )
                         TextField(
-                            state = tunnelHostState,
+                            value = tunnelHostText,
+                            onValueChange = {
+                                tunnelHostText = it
+                                tunnelHostState.edit { replace(0, length, it) }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(

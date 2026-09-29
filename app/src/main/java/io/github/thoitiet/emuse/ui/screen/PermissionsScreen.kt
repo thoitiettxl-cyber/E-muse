@@ -69,9 +69,8 @@ fun PermissionsScreen(
                             onClick = { onRowClick(row.key) },
                         )
                         if (i != appPerms.lastIndex) {
-                            androidx.compose.material3.HorizontalDivider(
+                            top.yukonga.miuix.kmp.basic.HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MiuixTheme.colorScheme.outline,
                             )
                         }
                     }
@@ -96,9 +95,8 @@ fun PermissionsScreen(
                             onClick = { onRowClick(row.key) },
                         )
                         if (i != sysPerms.lastIndex) {
-                            androidx.compose.material3.HorizontalDivider(
+                            top.yukonga.miuix.kmp.basic.HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MiuixTheme.colorScheme.outline,
                             )
                         }
                     }

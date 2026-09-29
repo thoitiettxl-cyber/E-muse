@@ -48,14 +48,14 @@ import io.github.thoitiet.emuse.ui.theme.EmuseTheme
 import java.util.concurrent.Executors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.GridView
+import top.yukonga.miuix.kmp.icon.extended.Home
+import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Settings
 
 /**
  * Main activity (Compose + Miuix, like Camera2Magit): bottom nav with 4 tabs
@@ -188,10 +188,10 @@ class MainActivity : ComponentActivity() {
         }
 
         val tabs = listOf(
-            TabItem("Trang chủ", Icons.Filled.Home),
-            TabItem("Tools", Icons.Filled.Build),
-            TabItem("Quyền", Icons.Filled.Info),
-            TabItem("Cài đặt", Icons.Filled.Settings),
+            TabItem("Trang chủ", MiuixIcons.Home),
+            TabItem("Tools", MiuixIcons.GridView),
+            TabItem("Quyền", MiuixIcons.Info),
+            TabItem("Cài đặt", MiuixIcons.Settings),
         )
 
         Scaffold(
