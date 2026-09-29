@@ -32,9 +32,16 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            val mgr = getSystemService(MediaProjectionManager::class.java)
-            ScreenCapture.setProjection(mgr.getMediaProjection(result.resultCode, result.data!!))
-            toast("Đã cấp quyền chụp màn hình")
+            // Android 14+: MediaProjection must be created inside a foreground
+            // service of type mediaProjection — hand the grant to MuseService.
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, MuseService::class.java)
+                    .setAction(MuseService.ACTION_START_PROJECTION)
+                    .putExtra(MuseService.EXTRA_MP_RESULT_CODE, result.resultCode)
+                    .putExtra(MuseService.EXTRA_MP_DATA, result.data),
+            )
+            toast("Đã gửi quyền chụp màn hình cho service")
         } else {
             toast("Chưa cấp quyền chụp màn hình")
         }

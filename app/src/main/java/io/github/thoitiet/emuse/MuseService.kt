@@ -1,15 +1,18 @@
 package io.github.thoitiet.emuse
 
+import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
+import io.github.thoitiet.emuse.exec.ScreenCapture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +31,9 @@ import kotlin.math.min
 class MuseService : Service() {
     companion object {
         const val ACTION_STOP = "io.github.thoitiet.emuse.ACTION_STOP"
+        const val ACTION_START_PROJECTION = "io.github.thoitiet.emuse.ACTION_START_PROJECTION"
+        const val EXTRA_MP_RESULT_CODE = "mp_result_code"
+        const val EXTRA_MP_DATA = "mp_data"
 
         @Volatile
         var running: Boolean = false
@@ -39,11 +45,12 @@ class MuseService : Service() {
     private lateinit var dispatcher: CommandDispatcher
     private var ws: WebSocket? = null
     private var reconnectDelayMs = 5000L
+    private var fgTypes = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        startForegroundX(buildNotification("E-Muse đang khởi động…"))
+        startForegroundX(buildNotification("E-Muse đang khởi động…"), fgTypes)
         dispatcher = CommandDispatcher(this, ::sendResult)
         client = OkHttpClient.Builder()
             .pingInterval(20, TimeUnit.SECONDS)
@@ -56,8 +63,32 @@ class MuseService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (intent?.action == ACTION_START_PROJECTION) {
+            startProjection(intent)
+        }
         connect()
         return START_STICKY
+    }
+
+    /**
+     * Android 14+: MediaProjection may only be created while a foreground
+     * service of type mediaProjection is running, so the grant is handed to
+     * the service instead of being consumed in the activity.
+     */
+    private fun startProjection(intent: Intent) {
+        val resultCode = intent.getIntExtra(EXTRA_MP_RESULT_CODE, Activity.RESULT_CANCELED)
+        @Suppress("DEPRECATION")
+        val data: Intent? = intent.getParcelableExtra(EXTRA_MP_DATA)
+        if (resultCode != Activity.RESULT_OK || data == null) return
+        fgTypes = fgTypes or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+        startForegroundX(buildNotification("E-Muse đang chạy"), fgTypes)
+        runCatching {
+            val mgr = getSystemService(MediaProjectionManager::class.java)
+            ScreenCapture.setProjection(mgr.getMediaProjection(resultCode, data))
+            updateNotification("E-Muse: đã cấp quyền chụp màn hình")
+        }.onFailure {
+            updateNotification("E-Muse: cấp quyền chụp màn hình thất bại")
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -88,6 +119,10 @@ class MuseService : Service() {
         // https:// -> wss://, http:// -> ws://
         val wsUrl = httpUrl.replaceFirst("^http".toRegex(), "ws")
         updateNotification("E-Muse: đang kết nối…")
+        // Drop any previous socket: the Worker closes the older connection
+        // for the same deviceId, which would otherwise trigger a reconnect loop.
+        runCatching { ws?.cancel() }
+        ws = null
         val request = Request.Builder().url(wsUrl).build()
         ws = client.newWebSocket(request, listener)
     }
@@ -156,9 +191,9 @@ class MuseService : Service() {
             .setOngoing(true)
             .build()
 
-    private fun startForegroundX(n: Notification) {
+    private fun startForegroundX(n: Notification, types: Int) {
         if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+            startForeground(1, n, types)
         } else {
             @Suppress("DEPRECATION")
             startForeground(1, n)
