@@ -236,10 +236,10 @@ val TOOL_DEFS: List<ToolDef> = listOf(
     ),
     ToolDef(
         "input_key",
-        "Send a key event by Android key code (e.g. 3 = HOME, 4 = BACK, 66 = ENTER).",
+        "Send a key event: by Android key code, or by named button (BACK/HOME/ENTER/RECENTS/PASTE/NOTIFICATIONS/QUICK_SETTINGS). Named buttons prefer accessibility global actions; key codes fall back to 'input keyevent'.",
         withDevice(
-            "\"keyCode\":{\"type\":\"number\",\"description\":\"Android KeyEvent key code.\"}",
-            "\"keyCode\"",
+            "\"keyCode\":{\"type\":\"number\",\"description\":\"Android KeyEvent key code (e.g. 3 = HOME, 4 = BACK, 66 = ENTER).\"}," +
+                "\"button\":{\"type\":\"string\",\"enum\":[\"BACK\",\"HOME\",\"ENTER\",\"RECENTS\",\"PASTE\",\"NOTIFICATIONS\",\"QUICK_SETTINGS\"],\"description\":\"Named button; takes precedence over keyCode when both are given.\"}",
         ),
         false, false, false, false, "write", "input.key",
     ),
@@ -321,6 +321,33 @@ val TOOL_DEFS: List<ToolDef> = listOf(
             "\"text\"",
         ),
         true, false, true, false, "query", "ui.wait_text",
+    ),
+    ToolDef(
+        "wait_for_package",
+        "Wait until the given Android package is in the foreground. Use after app_start/open_uri to confirm the target app opened. The device polls every 350ms and returns in ONE call.",
+        withDevice(
+            "\"package_name\":{\"type\":\"string\",\"description\":\"Application package name to wait for.\"}," +
+                "\"timeoutMs\":{\"type\":\"number\",\"description\":\"Max wait in ms (500-60000). Default 10000.\"}",
+            "\"package_name\"",
+        ),
+        true, false, true, false, "query", "ui.wait_package",
+    ),
+    ToolDef(
+        "wait",
+        "Wait for a duration so animations, network loads, or page transitions can finish. Do not use this instead of the verifiable waits wait_for_text/wait_for_package.",
+        withDevice(
+            "\"durationMs\":{\"type\":\"number\",\"description\":\"Wait duration, 100 to 30000. Default 1000.\"}",
+        ),
+        true, false, true, false, "query", "input.wait",
+    ),
+    ToolDef(
+        "open_system_panel",
+        "Open the notification shade or the quick settings panel. Prefers accessibility global actions; falls back to the statusbar shell command.",
+        withDevice(
+            "\"panel\":{\"type\":\"string\",\"enum\":[\"notifications\",\"quick_settings\"]}",
+            "\"panel\"",
+        ),
+        false, false, false, false, "write", "system.panel",
     ),
     ToolDef(
         "tool_flags",

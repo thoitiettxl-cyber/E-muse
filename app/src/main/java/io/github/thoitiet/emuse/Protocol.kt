@@ -35,6 +35,9 @@ object Cmds {
     const val UI_DUMP = "ui.dump"
     const val UI_SNAPSHOT = "ui.snapshot"
     const val UI_WAIT_TEXT = "ui.wait_text"
+    const val UI_WAIT_PACKAGE = "ui.wait_package"
+    const val INPUT_WAIT = "input.wait"
+    const val SYSTEM_PANEL = "system.panel"
 }
 
 data class DeviceCommand(val id: String, val cmd: String, val args: JSONObject) {

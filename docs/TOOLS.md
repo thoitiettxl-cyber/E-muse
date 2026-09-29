@@ -1,4 +1,4 @@
-# MCP Tools E-Muse (23)
+# MCP Tools E-Muse (36)
 
 Mọi tool (trừ `device_list`, `tool_flags`) đều có `deviceId` optional —
 bắt buộc khi có nhiều máy cùng kết nối.
@@ -22,8 +22,21 @@ bắt buộc khi có nhiều máy cùng kết nối.
 | `input_tap` | write | - | Chạm element (`elementId` từ `ui_snapshot`, ưu tiên) hoặc (x, y) pixel; `observationId` optional để chống tap nhầm màn hình đã cũ |
 | `tap_and_observe` | write | - | **Tap + snapshot mới trong 1 call** (thay pattern 3-turn snapshot→tap→snapshot); trả `{tap, snapshot}` |
 | `input_swipe` | write | - | Vuốt (x1,y1 → x2,y2, durationMs) |
-| `input_key` | write | - | Key code Android (3=HOME, 4=BACK, 66=ENTER...) |
+| `tap_area` | write | - | Chạm tâm hình chữ nhật (x1,y1 → x2,y2) |
+| `long_press` | write | - | Nhấn giữ tại (x, y), 300–3000ms (mặc định 800) |
+| `long_press_element` | write | - | Nhấn giữ element từ `ui_snapshot` (+ `observationId`) |
+| `scroll` | write | - | Cuộn màn hình theo hướng nội dung (up/down/left/right) |
+| `scroll_element` | write | - | Cuộn element scrollable từ `ui_snapshot` (+ `observationId`) |
+| `input_key` | write | - | Key code Android (3=HOME, 4=BACK, 66=ENTER...) hoặc nút tên (BACK/HOME/ENTER/RECENTS/PASTE/NOTIFICATIONS/QUICK_SETTINGS) |
 | `input_text` | write | - | Gõ text vào field đang focus |
+| `replace_text` | write | - | Thay text field đang focus hoặc element (`elementId` + `observationId`), tối đa 4000 ký tự |
+| `clear_text` | write | - | Xóa text field đang focus hoặc element |
+| `set_clipboard` | write | - | Ghi text vào clipboard (tối đa 20000 ký tự) |
+| `get_clipboard` | query | - | Đọc text clipboard (Android 10+ có thể trả rỗng khi nền) |
+| `paste_text` | write | - | Dán text qua clipboard — cần focus thật, không focus thì không động vào clipboard |
+| `wait` | query | - | Chờ N ms (100–30000) cho animation/network |
+| `wait_for_package` | query | - | **Đợi package lên foreground** (poll 350ms phía device, 1 call) |
+| `open_system_panel` | write | - | Mở notification shade / quick settings |
 | `ui_dump` | query | - | Cây UI dạng JSON (cần accessibility hoặc root) |
 | `ui_snapshot` | query | - | **List element gọn kiểu Eta/E-Jev** (id, text, desc, bounds) — cần accessibility; dùng id với `input_tap` thay vì đoán tọa độ |
 | `wait_for_text` | query | - | **Đợi text xuất hiện** (poll 350ms phía device, 1 call) — thay N turn poll thủ công |

@@ -41,7 +41,6 @@ class MuseAccessibilityService : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
 
     private fun gesture(path: Path, durationMs: Long): GestureOutcome {
@@ -97,5 +96,24 @@ class MuseAccessibilityService : AccessibilityService() {
         KeyEvent.KEYCODE_BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
         KeyEvent.KEYCODE_APP_SWITCH -> performGlobalAction(GLOBAL_ACTION_RECENTS)
         else -> false
+    }
+
+    fun openNotifications(): Boolean = performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+
+    fun openQuickSettings(): Boolean = performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+
+    /**
+     * Tracks the foreground package from window-state events (the config
+     * enables typeAllMask). Used by wait_for_package; may lag briefly behind
+     * the real foreground app.
+     */
+    @Volatile
+    var foregroundPackage: String? = null
+        private set
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            event.packageName?.toString()?.let { foregroundPackage = it }
+        }
     }
 }

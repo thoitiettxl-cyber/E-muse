@@ -1,6 +1,7 @@
 package io.github.thoitiet.emuse.exec
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import io.github.thoitiet.emuse.GestureOutcome
 import io.github.thoitiet.emuse.MuseAccessibilityService
@@ -153,6 +154,47 @@ object InputExecutor {
         val res = shellOrThrow(RootCommands.inputKey(keyCode), "key")
         if (res.optBoolean("ok")) settleAfter("key")
         return res
+    }
+
+    /**
+     * Eta's press_key: named buttons mapped to system keys or global actions.
+     * BACK/HOME/RECENTS prefer accessibility global actions (via [key]);
+     * NOTIFICATIONS/QUICK_SETTINGS prefer accessibility panel actions with a
+     * root `cmd statusbar` fallback.
+     */
+    fun pressButton(button: String): JSONObject {
+        return when (button.uppercase()) {
+            "BACK" -> key(KeyEvent.KEYCODE_BACK)
+            "HOME" -> key(KeyEvent.KEYCODE_HOME)
+            "RECENTS" -> key(KeyEvent.KEYCODE_APP_SWITCH)
+            "ENTER" -> key(KeyEvent.KEYCODE_ENTER)
+            "PASTE" -> key(KeyEvent.KEYCODE_PASTE)
+            "NOTIFICATIONS" -> {
+                val svc = service()
+                if (svc != null && svc.openNotifications()) {
+                    settleAfter("key")
+                    JSONObject().put("ok", true).put("via", "accessibility")
+                        .put("button", "NOTIFICATIONS")
+                } else {
+                    shellOrThrow("cmd statusbar expand-notifications", "press_key")
+                        .put("button", "NOTIFICATIONS")
+                }
+            }
+            "QUICK_SETTINGS" -> {
+                val svc = service()
+                if (svc != null && svc.openQuickSettings()) {
+                    settleAfter("key")
+                    JSONObject().put("ok", true).put("via", "accessibility")
+                        .put("button", "QUICK_SETTINGS")
+                } else {
+                    shellOrThrow("cmd statusbar expand-settings", "press_key")
+                        .put("button", "QUICK_SETTINGS")
+                }
+            }
+            else -> throw IllegalArgumentException(
+                "button must be one of BACK/HOME/ENTER/RECENTS/PASTE/NOTIFICATIONS/QUICK_SETTINGS",
+            )
+        }
     }
 
     fun text(text: String): JSONObject {

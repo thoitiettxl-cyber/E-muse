@@ -90,7 +90,7 @@ curl -s https://<tunnel-url-của-bạn>/health
 # {"ok":true,"mode":"direct"}
 ```
 
-## Danh sách tools (23)
+## Danh sách tools (36)
 
 | Tool | Loại | Mô tả |
 |---|---|---|
@@ -111,8 +111,21 @@ curl -s https://<tunnel-url-của-bạn>/health
 | `input_tap` | write | Chạm (x, y) hoặc theo `elementId` từ `ui_snapshot` (+ `observationId` chống tap nhầm) |
 | `tap_and_observe` | write | **Tap + snapshot mới trong 1 call** — thay pattern 3-turn |
 | `input_swipe` | write | Vuốt (x1,y1 → x2,y2) |
-| `input_key` | write | Gửi key code |
+| `tap_area` | write | Chạm tâm hình chữ nhật |
+| `long_press` | write | Nhấn giữ tại (x, y), 300–3000ms |
+| `long_press_element` | write | Nhấn giữ element từ `ui_snapshot` |
+| `scroll` | write | Cuộn màn hình (up/down/left/right) |
+| `scroll_element` | write | Cuộn element scrollable từ `ui_snapshot` |
+| `input_key` | write | Gửi key code hoặc nút tên (BACK/HOME/...) |
 | `input_text` | write | Gõ text vào ô đang focus |
+| `replace_text` | write | Thay text field/element (tối đa 4000 ký tự) |
+| `clear_text` | write | Xóa text field/element |
+| `set_clipboard` | write | Ghi text vào clipboard |
+| `get_clipboard` | query | Đọc text clipboard |
+| `paste_text` | write | Dán text (cần focus thật) |
+| `wait` | query | Chờ N ms (100–30000) |
+| `wait_for_package` | query | Đợi package lên foreground (device poll, 1 call) |
+| `open_system_panel` | write | Mở notification shade / quick settings |
 | `ui_dump` | query | Cây UI hiện tại (JSON) |
 | `ui_snapshot` | query | Danh sách element gọn nhẹ (id `e0…`, text, bounds) cho automation |
 | `wait_for_text` | query | **Đợi text xuất hiện** (device poll, 1 call) |

@@ -8,6 +8,7 @@ import io.github.thoitiet.emuse.exec.FileExecutor
 import io.github.thoitiet.emuse.exec.InputExecutor
 import io.github.thoitiet.emuse.exec.ScreenExecutor
 import io.github.thoitiet.emuse.exec.ShellExecutor
+import io.github.thoitiet.emuse.exec.SystemExecutor
 import io.github.thoitiet.emuse.exec.UiDumpExecutor
 import io.github.thoitiet.emuse.exec.UiSnapshotter
 import kotlinx.coroutines.CoroutineScope
@@ -73,13 +74,19 @@ class CommandDispatcher(
             Cmds.INPUT_SCROLL -> a.optString("direction")
             Cmds.INPUT_SCROLL_ELEMENT -> "element=${a.optString("elementId")} ${a.optString("direction")}"
             Cmds.UI_WAIT_TEXT -> a.optString("text").take(20)
+            Cmds.UI_WAIT_PACKAGE -> a.optString("package_name")
+            Cmds.INPUT_WAIT -> "${a.optInt("durationMs", 1_000)}ms"
+            Cmds.SYSTEM_PANEL -> a.optString("panel")
             Cmds.INPUT_TEXT -> a.optString("text").take(20)
             Cmds.INPUT_REPLACE_TEXT -> a.optString("text").take(20)
             Cmds.INPUT_CLEAR_TEXT -> "element=${a.optString("elementId")}"
             Cmds.INPUT_PASTE -> a.optString("text").take(20)
             Cmds.CLIPBOARD_SET -> a.optString("text").take(20)
             Cmds.CLIPBOARD_GET -> ""
-            Cmds.INPUT_KEY -> "keyCode=${a.optInt("keyCode")}"
+            Cmds.INPUT_KEY -> {
+                val b = a.optString("button")
+                if (b.isNotEmpty()) "button=$b" else "keyCode=${a.optInt("keyCode")}"
+            }
             else -> ""
         }.take(40)
         return if (s.isNotEmpty()) " $s" else ""
@@ -152,7 +159,12 @@ class CommandDispatcher(
                 a.optString("observationId").ifEmpty { null },
                 a.getString("direction"),
             )
-            Cmds.INPUT_KEY -> InputExecutor.key(a.getInt("keyCode"))
+            Cmds.INPUT_KEY -> {
+                val button = a.optString("button").ifEmpty { null }
+                if (button != null) InputExecutor.pressButton(button)
+                else if (a.has("keyCode")) InputExecutor.key(a.getInt("keyCode"))
+                else throw IllegalArgumentException("input_key needs keyCode or button")
+            }
             Cmds.INPUT_TEXT -> InputExecutor.text(a.getString("text"))
             Cmds.INPUT_REPLACE_TEXT -> InputExecutor.replaceText(
                 a.getString("text"),
@@ -177,6 +189,12 @@ class CommandDispatcher(
                 a.getString("text"),
                 a.optLong("timeoutMs", 10_000L),
             )
+            Cmds.UI_WAIT_PACKAGE -> SystemExecutor.waitForPackage(
+                a.getString("package_name"),
+                a.optLong("timeoutMs", 10_000L),
+            )
+            Cmds.INPUT_WAIT -> SystemExecutor.waitMs(a.optInt("durationMs", 1_000))
+            Cmds.SYSTEM_PANEL -> SystemExecutor.openPanel(a.getString("panel"))
 
             else -> throw IllegalArgumentException("unknown cmd: ${cmd.cmd}")
         }
