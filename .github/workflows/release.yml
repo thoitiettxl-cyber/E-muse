@@ -25,8 +25,10 @@ jobs:
 
       - name: Install Android platform and build-tools
         run: |
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          SDKMANAGER=$(ls /usr/local/lib/android/sdk/cmdline-tools/*/bin/sdkmanager /opt/android-sdk/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+          echo "Using sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
       - name: Restore release keystore
         env:
