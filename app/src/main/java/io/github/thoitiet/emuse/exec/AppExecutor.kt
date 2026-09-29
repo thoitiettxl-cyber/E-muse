@@ -73,7 +73,7 @@ class AppExecutor(private val ctx: Context) {
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or
                 (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
             val statusReceiver = PendingIntent.getBroadcast(ctx, sessionId, intent, flags)
-            session.commit(statusReceiver)
+            session.commit(statusReceiver.intentSender)
         } finally {
             session.close()
         }
