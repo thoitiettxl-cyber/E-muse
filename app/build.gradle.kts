@@ -29,7 +29,7 @@ base {
 
 android {
     namespace = "io.github.thoitiet.emuse"
-    compileSdk = 34
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "io.github.thoitiet.emuse"
@@ -68,7 +68,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "21"
     }
     buildFeatures {
         compose = true
