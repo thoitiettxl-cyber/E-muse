@@ -131,7 +131,7 @@ class MainActivity : ComponentActivity() {
         } else {
             toast("Chưa cấp quyền chụp màn hình")
         }
-        refreshPermissions()
+        refreshAll()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -214,7 +214,10 @@ class MainActivity : ComponentActivity() {
                             selected = selectedTab == index,
                             onClick = {
                                 selectedTab = index
-                                scope.launch { pagerState.animateScrollToPage(index) }
+                                // Instant switch: no slide animation through
+                                // intermediate pages (avoids jank composing
+                                // heavy pages mid-animation).
+                                scope.launch { pagerState.scrollToPage(index) }
                             },
                             icon = tab.icon,
                             label = tab.label,
@@ -405,47 +408,50 @@ class MainActivity : ComponentActivity() {
         bgExecutor.execute {
             val root = rootCached ?: false
             val prefs = Prefs(this@MainActivity)
+            // Build everything off the main thread (permission checks,
+            // Settings.Secure/AppOps reads); only state assignment runs on UI.
+            val home = HomeUiState(
+                serviceRunning = MuseService.running,
+                mcpPort = prefs.mcpPort,
+                hasRoot = root,
+                overlayEnabled = prefs.overlayEnabled,
+                tunnelEnabled = prefs.tunnelEnabled,
+                tunnelUrl = prefs.tunnelUrl,
+            )
+            val groups = ToolGroup.entries.associateWith { prefs.isGroupEnabled(it) }
+            val settings = SettingsUiState(
+                apiKey = prefs.apiKey,
+                tunnelEnabled = prefs.tunnelEnabled,
+                tunnelUrl = prefs.tunnelUrl,
+                tunnelToken = prefs.tunnelToken,
+                tunnelHostname = prefs.tunnelHostname,
+            )
+            val app = buildAppPerms()
+            val sys = buildSysPerms()
+            val rootState = PermRowState(
+                key = "root",
+                title = "Root",
+                subtitle = "su qua KernelSU/Magisk",
+                statusText = when (root) {
+                    true -> "Có"
+                    false -> "Không"
+                    else -> "Đang kiểm tra…"
+                },
+                ok = root,
+                icon = MiuixIcons.Unlock,
+                iconColor = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                clickable = false,
+            )
             runOnUiThread {
                 if (isDestroyed || isFinishing) return@runOnUiThread
-                homeState = HomeUiState(
-                    serviceRunning = MuseService.running,
-                    mcpPort = prefs.mcpPort,
-                    hasRoot = root,
-                    overlayEnabled = prefs.overlayEnabled,
-                    tunnelEnabled = prefs.tunnelEnabled,
-                    tunnelUrl = prefs.tunnelUrl,
-                )
-                groupEnabled = ToolGroup.entries.associateWith { prefs.isGroupEnabled(it) }
-                settingsState = SettingsUiState(
-                    apiKey = prefs.apiKey,
-                    tunnelEnabled = prefs.tunnelEnabled,
-                    tunnelUrl = prefs.tunnelUrl,
-                    tunnelToken = prefs.tunnelToken,
-                    tunnelHostname = prefs.tunnelHostname,
-                )
-                refreshPermissions()
+                homeState = home
+                groupEnabled = groups
+                settingsState = settings
+                appPerms = app
+                sysPerms = sys
+                rootPermState = rootState
             }
         }
-    }
-
-    private fun refreshPermissions() {
-        val root = rootCached
-        appPerms = buildAppPerms()
-        sysPerms = buildSysPerms()
-        rootPermState = PermRowState(
-            key = "root",
-            title = "Root",
-            subtitle = "su qua KernelSU/Magisk",
-            statusText = when (root) {
-                true -> "Có"
-                false -> "Không"
-                null -> "Đang kiểm tra…"
-            },
-            ok = root == true,
-            icon = MiuixIcons.Unlock,
-            iconColor = androidx.compose.ui.graphics.Color(0xFF4CAF50),
-            clickable = false,
-        )
     }
 
     private fun buildAppPerms(): List<PermRowState> {
