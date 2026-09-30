@@ -105,10 +105,12 @@ class MuseService : Service() {
                 // Never point a public tunnel at a dead local server.
                 tm.failNow("MCP local bind thất bại — không start tunnel")
             } else {
+                val named = prefs.tunnelFixedDomain &&
+                    prefs.tunnelToken.isNotBlank() && prefs.tunnelHostname.isNotBlank()
                 tm.start(
                     "http://127.0.0.1:$port",
-                    prefs.tunnelToken,
-                    prefs.tunnelHostname,
+                    if (named) prefs.tunnelToken else "",
+                    if (named) prefs.tunnelHostname else "",
                 ) { done, total ->
                     if (total > 0) FloatingOverlay.event("Tải cloudflared ${(done * 100 / total)}%")
                 }
@@ -129,10 +131,12 @@ class MuseService : Service() {
         prefs.tunnelEnabled = enabled
         val tm = tunnel ?: return
         if (enabled) {
+            val named = prefs.tunnelFixedDomain &&
+                prefs.tunnelToken.isNotBlank() && prefs.tunnelHostname.isNotBlank()
             tm.start(
                 "http://127.0.0.1:${prefs.mcpPort}",
-                prefs.tunnelToken,
-                prefs.tunnelHostname,
+                if (named) prefs.tunnelToken else "",
+                if (named) prefs.tunnelHostname else "",
             ) { _, _ -> }
         } else {
             tm.stop()

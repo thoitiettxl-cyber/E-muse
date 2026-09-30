@@ -38,6 +38,14 @@ class Prefs(ctx: Context) {
         get() = sp.getString("tunnel_hostname", "") ?: ""
         set(v) = sp.edit().putString("tunnel_hostname", v).apply()
 
+    /**
+     * true = named tunnel with token+hostname (fixed URL);
+     * false = Quick Tunnel (random URL each start).
+     */
+    var tunnelFixedDomain: Boolean
+        get() = sp.getBoolean("tunnel_fixed_domain", false)
+        set(v) = sp.edit().putBoolean("tunnel_fixed_domain", v).apply()
+
     /** SHA-256 pin of the cloudflared binary (TOFU; empty = not pinned yet). */
     var cloudflaredSha256: String
         get() = sp.getString("cloudflared_sha256", "") ?: ""

@@ -36,6 +36,7 @@ data class SettingsUiState(
     val tunnelUrl: String = "",
     val tunnelToken: String = "",
     val tunnelHostname: String = "",
+    val tunnelFixedDomain: Boolean = false,
 )
 
 /**
@@ -49,6 +50,7 @@ fun SettingsScreen(
     tunnelTokenState: TextFieldState,
     tunnelHostState: TextFieldState,
     onTunnelToggle: (Boolean) -> Unit,
+    onFixedDomainToggle: (Boolean) -> Unit,
     onTunnelUrlClick: () -> Unit,
     topPadding: Dp = 0.dp,
     bottomPadding: Dp = 0.dp,
@@ -165,52 +167,63 @@ fun SettingsScreen(
                             color = MiuixTheme.colorScheme.primary,
                         )
                     }
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    ) {
-                        Text(
-                            text = "Token",
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                        TextField(
-                            value = tunnelTokenText,
-                            onValueChange = {
-                                tunnelTokenText = it
-                                tunnelTokenState.edit { replace(0, length, it) }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Text(
-                            text = "Named tunnel token (trống = Quick Tunnel)",
-                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
-                        )
-                        Text(
-                            text = "Hostname",
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                        TextField(
-                            value = tunnelHostText,
-                            onValueChange = {
-                                tunnelHostText = it
-                                tunnelHostState.edit { replace(0, length, it) }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Text(
-                            text = "vd mcp.example.com",
-                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
+                    SwitchPreference(
+                        title = "Domain cố định",
+                        summary = if (uiState.tunnelFixedDomain)
+                            "Named tunnel — URL không đổi"
+                        else "Quick Tunnel — URL random mỗi lần bật",
+                        checked = uiState.tunnelFixedDomain,
+                        onCheckedChange = onFixedDomainToggle,
+                    )
+                    if (uiState.tunnelFixedDomain) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                        ) {
+                            Text(
+                                text = "Token",
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                            TextField(
+                                value = tunnelTokenText,
+                                onValueChange = {
+                                    tunnelTokenText = it
+                                    tunnelTokenState.edit { replace(0, length, it) }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text(
+                                text = "Token của named tunnel trong Cloudflare dashboard",
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
+                            )
+                            Text(
+                                text = "Hostname",
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                            TextField(
+                                value = tunnelHostText,
+                                onValueChange = {
+                                    tunnelHostText = it
+                                    tunnelHostState.edit { replace(0, length, it) }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text(
+                                text = "vd mcp.example.com",
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
                     }
                 }
             }
         }
         item(key = "hint-tunnel") {
             Text(
-                text = "Có token + hostname cố định → URL không đổi sau mỗi lần bật.",
+                text = "Bật \"Domain cố định\" + nhập token/hostname → URL không đổi " +
+                    "sau mỗi lần bật. Tắt → Quick Tunnel với URL random.",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),

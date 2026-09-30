@@ -22,6 +22,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,6 +94,12 @@ class MainActivity : ComponentActivity() {
     )
     private var settingsState by mutableStateOf(SettingsUiState())
 
+    // Settings text fields: Activity-scoped (survive recomposition), seeded
+    // from Prefs in onCreate, persisted in onPause().
+    private lateinit var apiKeyState: TextFieldState
+    private lateinit var tunnelTokenState: TextFieldState
+    private lateinit var tunnelHostState: TextFieldState
+
     private val rowPermsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { grants ->
@@ -139,9 +146,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Text field states for Settings (survive recomposition).
-        val apiKeyState = androidx.compose.foundation.text.input.TextFieldState()
-        val tunnelTokenState = androidx.compose.foundation.text.input.TextFieldState()
-        val tunnelHostState = androidx.compose.foundation.text.input.TextFieldState()
+        // Seeded from Prefs: a cold start must never show (or persist) empty values.
+        val prefs0 = Prefs(this)
+        apiKeyState = TextFieldState(prefs0.apiKey)
+        tunnelTokenState = TextFieldState(prefs0.tunnelToken)
+        tunnelHostState = TextFieldState(prefs0.tunnelHostname)
 
         setContent {
             EmuseTheme {
@@ -172,9 +181,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Persist settings inputs (like old SettingsActivity.onPause).
-        // Note: TextFieldStates are read in MainScreen via callback.
         refreshAll()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Persist Settings inputs here (not on tab switch): covers home button,
+        // recents swipe-away and process death. States are seeded from Prefs in
+        // onCreate, so this can never wipe saved values on a cold start.
+        persistSettingsInputs(
+            apiKeyState.text.toString(),
+            tunnelTokenState.text.toString(),
+            tunnelHostState.text.toString(),
+        )
     }
 
     override fun onDestroy() {
@@ -184,9 +203,9 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun MainScreen(
-        apiKeyState: androidx.compose.foundation.text.input.TextFieldState,
-        tunnelTokenState: androidx.compose.foundation.text.input.TextFieldState,
-        tunnelHostState: androidx.compose.foundation.text.input.TextFieldState,
+        apiKeyState: TextFieldState,
+        tunnelTokenState: TextFieldState,
+        tunnelHostState: TextFieldState,
     ) {
         val pagerState = rememberPagerState(pageCount = { 4 })
         val scope = rememberCoroutineScope()
@@ -261,22 +280,12 @@ class MainActivity : ComponentActivity() {
                         tunnelTokenState = tunnelTokenState,
                         tunnelHostState = tunnelHostState,
                         onTunnelToggle = ::onTunnelToggle,
+                        onFixedDomainToggle = ::onFixedDomainToggle,
                         onTunnelUrlClick = ::copyTunnelUrl,
                         topPadding = padding.calculateTopPadding(),
                         bottomPadding = padding.calculateBottomPadding(),
                     )
                 }
-            }
-        }
-
-        // Persist settings inputs when leaving the Settings tab.
-        LaunchedEffect(selectedTab) {
-            if (selectedTab != 3) {
-                persistSettingsInputs(
-                    apiKeyState.text.toString(),
-                    tunnelTokenState.text.toString(),
-                    tunnelHostState.text.toString(),
-                )
             }
         }
     }
@@ -332,6 +341,22 @@ class MainActivity : ComponentActivity() {
             delay(5000); refreshAll()
             delay(10000); refreshAll()
             delay(15000); refreshAll()
+        }
+    }
+
+    private fun onFixedDomainToggle(checked: Boolean) {
+        val prefs = Prefs(this)
+        prefs.tunnelFixedDomain = checked
+        if (checked && (prefs.tunnelToken.isBlank() || prefs.tunnelHostname.isBlank())) {
+            toast("Nhập Token + Hostname để dùng domain cố định")
+        }
+        refreshAll()
+        if (prefs.tunnelEnabled) {
+            // Apply the mode change immediately.
+            val intent = Intent(this, MuseService::class.java)
+                .setAction(MuseService.ACTION_RESTART_TUNNEL)
+            if (MuseService.running) startService(intent)
+            else ContextCompat.startForegroundService(this, intent)
         }
     }
 
@@ -425,6 +450,7 @@ class MainActivity : ComponentActivity() {
                 tunnelUrl = prefs.tunnelUrl,
                 tunnelToken = prefs.tunnelToken,
                 tunnelHostname = prefs.tunnelHostname,
+                tunnelFixedDomain = prefs.tunnelFixedDomain,
             )
             val app = buildAppPerms()
             val sys = buildSysPerms()
