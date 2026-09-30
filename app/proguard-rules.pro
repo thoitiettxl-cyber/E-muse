@@ -9,3 +9,7 @@
 # Giữ tên class cho service/receiver tra cứu qua ComponentName.
 -keep class io.github.thoitiet.emuse.MuseAccessibilityService { *; }
 -keep class io.github.thoitiet.emuse.InstallReceiver { *; }
+
+# androidx.security.crypto -> Tink thiếu annotation compileOnly (chuẩn khi bật R8).
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
