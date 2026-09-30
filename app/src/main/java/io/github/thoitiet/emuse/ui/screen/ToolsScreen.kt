@@ -32,11 +32,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.File
-import top.yukonga.miuix.kmp.icon.extended.Phone
-import top.yukonga.miuix.kmp.icon.extended.Play
-import top.yukonga.miuix.kmp.icon.extended.Search
-import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -96,7 +92,7 @@ fun ToolsScreen(
                         ToolCard(
                             name = name,
                             color = groupColor(g),
-                            icon = groupIcon(g),
+                            icon = toolIcon(name),
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -123,7 +119,7 @@ fun ToolsScreen(
                 ToolCard(
                     name = "tool_flags",
                     color = Color(0xFF9E9E9E),
-                    icon = MiuixIcons.Settings,
+                    icon = toolIcon("tool_flags"),
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.weight(1f))
@@ -194,13 +190,94 @@ private fun groupColor(g: ToolGroup): Color = when (g) {
     ToolGroup.SENSITIVE_ACTION -> Color(0xFFF44336) // red
 }
 
-/** One Miuix icon per tool group, shown in the colored circle. */
-private fun groupIcon(g: ToolGroup): ImageVector = when (g) {
-    ToolGroup.TERMINAL_FILE -> MiuixIcons.File
-    ToolGroup.DEVICE_DIRECT -> MiuixIcons.Phone
-    ToolGroup.SENSITIVE_READ -> MiuixIcons.Search
-    ToolGroup.SENSITIVE_ACTION -> MiuixIcons.Play
-}
+/** One Miuix icon per tool (Eta-style); circle color stays per-group. */
+private fun toolIcon(name: String): ImageVector =
+    TOOL_ICON[name] ?: MiuixIcons.Info
+
+private val TOOL_ICON: Map<String, ImageVector> = mapOf(
+    // ---- terminal & file ----
+    "shell_exec" to MiuixIcons.Play,
+    "file_list" to MiuixIcons.ListView,
+    "file_pull" to MiuixIcons.Download,
+    "file_push" to MiuixIcons.UploadCloud,
+    "file_delete" to MiuixIcons.Delete,
+    // ---- device direct ----
+    "device_list" to MiuixIcons.SearchDevice,
+    "device_info" to MiuixIcons.Info,
+    "device_status" to MiuixIcons.Show,
+    "network_info" to MiuixIcons.Carrier,
+    "get_volume" to MiuixIcons.VolumeUp,
+    "set_volume" to MiuixIcons.Tune,
+    "media_control" to MiuixIcons.Play,
+    "set_alarm" to MiuixIcons.Alarm,
+    "set_timer" to MiuixIcons.Timer,
+    "top_memory_apps" to MiuixIcons.Layers,
+    "top_storage_apps" to MiuixIcons.Store,
+    "app_list" to MiuixIcons.GridView,
+    "app_info" to MiuixIcons.MoreCircle,
+    "wait" to MiuixIcons.Stopwatch,
+    "wait_for_text" to MiuixIcons.Search,
+    "wait_for_package" to MiuixIcons.Recent,
+    // ---- sensitive read ----
+    "get_current_context" to MiuixIcons.WorldClock,
+    "set_clipboard" to MiuixIcons.Copy,
+    "get_clipboard" to MiuixIcons.Paste,
+    "screen_capture" to MiuixIcons.ScreenCapture,
+    "ui_dump" to MiuixIcons.File,
+    "ui_snapshot" to MiuixIcons.Scan,
+    "observe_screen" to MiuixIcons.ScreenMirroring,
+    "list_alarms" to MiuixIcons.Alarm,
+    "list_active_timers" to MiuixIcons.Timer,
+    "search_contacts" to MiuixIcons.Contacts,
+    "search_call_history" to MiuixIcons.Phone,
+    "search_messages" to MiuixIcons.Messages,
+    "search_calendar_events" to MiuixIcons.Months,
+    "search_media" to MiuixIcons.Photos,
+    "search_audio" to MiuixIcons.Music,
+    "search_recordings" to MiuixIcons.Recording,
+    "search_files" to MiuixIcons.Folder,
+    "search_downloads" to MiuixIcons.FileDownloads,
+    "get_current_location" to MiuixIcons.Location,
+    "recent_app_activity" to MiuixIcons.Recent,
+    "app_usage_summary" to MiuixIcons.Stopwatch,
+    "recent_notifications" to MiuixIcons.ListView,
+    "wifi_credentials" to MiuixIcons.Lock,
+    "read_sms_code" to MiuixIcons.Ok,
+    "get_logcat" to MiuixIcons.File,
+    "get_setting" to MiuixIcons.Settings,
+    "get_device_environment" to MiuixIcons.Tune,
+    "search_coloros_notes" to MiuixIcons.Notes,
+    "search_coloros_recordings" to MiuixIcons.RecordingTape,
+    "search_recording_summaries" to MiuixIcons.NotesFill,
+    "search_coloros_memories" to MiuixIcons.MindMap,
+    "search_personal_orders" to MiuixIcons.BankCards,
+    "search_saved_places" to MiuixIcons.Pin,
+    // ---- sensitive action ----
+    "app_install" to MiuixIcons.Download,
+    "app_uninstall" to MiuixIcons.Delete,
+    "app_start" to MiuixIcons.Play,
+    "app_stop" to MiuixIcons.Close,
+    "open_uri" to MiuixIcons.Link,
+    "input_tap" to MiuixIcons.Pin,
+    "tap_and_observe" to MiuixIcons.Show,
+    "input_swipe" to MiuixIcons.Forward,
+    "tap_area" to MiuixIcons.SelectAll,
+    "long_press" to MiuixIcons.Pause,
+    "long_press_element" to MiuixIcons.More,
+    "scroll" to MiuixIcons.Sort,
+    "scroll_element" to MiuixIcons.ListView,
+    "input_key" to MiuixIcons.Back,
+    "input_text" to MiuixIcons.Edit,
+    "replace_text" to MiuixIcons.Replace,
+    "clear_text" to MiuixIcons.Clear,
+    "paste_text" to MiuixIcons.Paste,
+    "open_system_panel" to MiuixIcons.ExpandMore,
+    "set_setting" to MiuixIcons.Settings,
+    "set_device_state" to MiuixIcons.Tune,
+    "app_state_control" to MiuixIcons.Blocklist,
+    // ---- system ----
+    "tool_flags" to MiuixIcons.Settings,
+)
 
 /** Short Vietnamese description per tool (fallback: original English). */
 private fun viDesc(name: String): String =
