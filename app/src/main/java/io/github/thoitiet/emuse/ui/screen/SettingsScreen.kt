@@ -80,6 +80,12 @@ fun SettingsScreen(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
     ) {
+        item(key = "header") {
+            ScreenHeader(
+                title = "Cài đặt",
+                subtitle = "Cấu hình MCP và tunnel",
+            )
+        }
         // ---- section: Truy cập ----
         item(key = "title-access") {
             SmallTitle(text = "Truy cập")

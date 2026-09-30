@@ -52,10 +52,22 @@ import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Contacts
+import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.GridView
 import top.yukonga.miuix.kmp.icon.extended.Home
 import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Location
+import top.yukonga.miuix.kmp.icon.extended.Messages
+import top.yukonga.miuix.kmp.icon.extended.Months
+import top.yukonga.miuix.kmp.icon.extended.Music
+import top.yukonga.miuix.kmp.icon.extended.Phone
+import top.yukonga.miuix.kmp.icon.extended.Photos
+import top.yukonga.miuix.kmp.icon.extended.Recent
+import top.yukonga.miuix.kmp.icon.extended.ScreenCapture
 import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.icon.extended.Tune
+import top.yukonga.miuix.kmp.icon.extended.Unlock
 
 /**
  * Main activity (Compose + Miuix, like Camera2Magit): bottom nav with 4 tabs
@@ -77,7 +89,7 @@ class MainActivity : ComponentActivity() {
     private var sysPerms by mutableStateOf(listOf<PermRowState>())
     private var rootPermState by mutableStateOf(
         PermRowState("root", "Root", "su qua KernelSU/Magisk", "Đang kiểm tra…", false,
-            androidx.compose.ui.graphics.Color(0xFF4CAF50), clickable = false)
+            MiuixIcons.Unlock, androidx.compose.ui.graphics.Color(0xFF4CAF50), clickable = false)
     )
     private var settingsState by mutableStateOf(SettingsUiState())
 
@@ -430,6 +442,7 @@ class MainActivity : ComponentActivity() {
                 null -> "Đang kiểm tra…"
             },
             ok = root == true,
+            icon = MiuixIcons.Unlock,
             iconColor = androidx.compose.ui.graphics.Color(0xFF4CAF50),
             clickable = false,
         )
@@ -438,29 +451,31 @@ class MainActivity : ComponentActivity() {
     private fun buildAppPerms(): List<PermRowState> {
         val list = mutableListOf(
             permRow("contacts", "Danh bạ", "Tìm danh bạ qua MCP",
-                arrayOf(Manifest.permission.READ_CONTACTS)),
+                arrayOf(Manifest.permission.READ_CONTACTS), MiuixIcons.Contacts),
             permRow("call_log", "Nhật ký cuộc gọi", "Tìm lịch sử cuộc gọi qua MCP",
-                arrayOf(Manifest.permission.READ_CALL_LOG)),
+                arrayOf(Manifest.permission.READ_CALL_LOG), MiuixIcons.Phone),
             permRow("sms", "Tin nhắn SMS", "Tìm SMS, đọc mã OTP qua MCP",
-                arrayOf(Manifest.permission.READ_SMS)),
+                arrayOf(Manifest.permission.READ_SMS), MiuixIcons.Messages),
             permRow("calendar", "Lịch", "Tìm sự kiện lịch qua MCP",
-                arrayOf(Manifest.permission.READ_CALENDAR)),
+                arrayOf(Manifest.permission.READ_CALENDAR), MiuixIcons.Months),
         )
         // minSdk 33 now, so always use media permissions.
         list += permRow("media", "Ảnh & video", "Tìm ảnh/video trong MediaStore",
-            arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO))
+            arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO),
+            MiuixIcons.Photos)
         list += permRow("audio", "Nhạc & ghi âm", "Tìm nhạc, file ghi âm",
-            arrayOf(Manifest.permission.READ_MEDIA_AUDIO))
+            arrayOf(Manifest.permission.READ_MEDIA_AUDIO), MiuixIcons.Music)
         list += permRow("notifications", "Thông báo", "Hiện thông báo foreground service",
-            arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS), MiuixIcons.Info)
         list += permRow("location", "Vị trí", "Vị trí hiện tại của máy",
             arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION))
+                Manifest.permission.ACCESS_COARSE_LOCATION), MiuixIcons.Location)
         return list
     }
 
     private fun permRow(
         key: String, title: String, subtitle: String, perms: Array<String>,
+        icon: ImageVector,
     ): PermRowState {
         val ok = perms.all {
             checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
@@ -471,6 +486,7 @@ class MainActivity : ComponentActivity() {
             subtitle = subtitle,
             statusText = if (ok) "Đã bật" else "Cần chú ý",
             ok = ok,
+            icon = icon,
             iconColor = androidx.compose.ui.graphics.Color(0xFF2196F3),
         )
     }
@@ -484,6 +500,7 @@ class MainActivity : ComponentActivity() {
                 subtitle = "Cần cho thao tác chạm/vuốt/gõ phím",
                 statusText = if (accessibilityOn()) "Đã bật" else "Cần chú ý",
                 ok = accessibilityOn(),
+                icon = MiuixIcons.Tune,
                 iconColor = orange,
             ),
             PermRowState(
@@ -493,6 +510,7 @@ class MainActivity : ComponentActivity() {
                 statusText = if (ScreenCapture.hasProjection() || rootCached == true)
                     "Đã bật" else "Cần chú ý",
                 ok = ScreenCapture.hasProjection() || rootCached == true,
+                icon = MiuixIcons.ScreenCapture,
                 iconColor = orange,
             ),
             PermRowState(
@@ -502,6 +520,7 @@ class MainActivity : ComponentActivity() {
                 statusText = if (packageManager.canRequestPackageInstalls())
                     "Đã cấp" else "Chưa cấp",
                 ok = packageManager.canRequestPackageInstalls(),
+                icon = MiuixIcons.Download,
                 iconColor = orange,
             ),
             PermRowState(
@@ -510,6 +529,7 @@ class MainActivity : ComponentActivity() {
                 subtitle = "Đọc app vừa mở, thời gian dùng foreground",
                 statusText = if (usageAccessGranted()) "Đã cấp" else "Chưa cấp",
                 ok = usageAccessGranted(),
+                icon = MiuixIcons.Recent,
                 iconColor = orange,
             ),
         )

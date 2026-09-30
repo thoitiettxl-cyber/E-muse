@@ -51,6 +51,12 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
     ) {
+        item(key = "header") {
+            ScreenHeader(
+                title = "Trang chủ",
+                subtitle = "Trạng thái dịch vụ và hệ thống",
+            )
+        }
         // ---- status card ----
         item(key = "status") {
             Card(

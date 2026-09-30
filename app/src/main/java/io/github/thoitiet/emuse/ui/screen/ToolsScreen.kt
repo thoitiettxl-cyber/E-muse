@@ -1,6 +1,8 @@
 package io.github.thoitiet.emuse.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,11 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -22,8 +28,15 @@ import io.github.thoitiet.emuse.ToolGroup
 import io.github.thoitiet.emuse.mcp.TOOL_BY_NAME
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.File
+import top.yukonga.miuix.kmp.icon.extended.Phone
+import top.yukonga.miuix.kmp.icon.extended.Play
+import top.yukonga.miuix.kmp.icon.extended.Search
+import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -42,6 +55,12 @@ fun ToolsScreen(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
     ) {
+        item(key = "header") {
+            ScreenHeader(
+                title = "Tools",
+                subtitle = "Điều khiển thiết bị qua MCP",
+            )
+        }
         for (g in ToolGroup.entries) {
             item(key = "title-${g.name}") {
                 SmallTitle(text = g.title)
@@ -77,6 +96,7 @@ fun ToolsScreen(
                         ToolCard(
                             name = name,
                             color = groupColor(g),
+                            icon = groupIcon(g),
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -103,6 +123,7 @@ fun ToolsScreen(
                 ToolCard(
                     name = "tool_flags",
                     color = Color(0xFF9E9E9E),
+                    icon = MiuixIcons.Settings,
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.weight(1f))
@@ -124,7 +145,7 @@ fun ToolsScreen(
 }
 
 @Composable
-private fun ToolCard(name: String, color: Color, modifier: Modifier = Modifier) {
+private fun ToolCard(name: String, color: Color, icon: ImageVector, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
         cornerRadius = CardDefaults.CornerRadius,
@@ -135,14 +156,19 @@ private fun ToolCard(name: String, color: Color, modifier: Modifier = Modifier) 
                 .fillMaxWidth()
                 .padding(14.dp),
         ) {
-            // Colored circle with first letter, like the old UiKit.circleIcon.
-            androidx.compose.foundation.layout.Box(
+            // Eta-style: solid colored circle with a white group icon.
+            Box(
                 modifier = Modifier
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 10.dp)
+                    .size(40.dp)
+                    .background(color, CircleShape),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = name.first().uppercase(),
-                    color = color,
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
                 )
             }
             Text(
@@ -166,6 +192,14 @@ private fun groupColor(g: ToolGroup): Color = when (g) {
     ToolGroup.DEVICE_DIRECT -> Color(0xFF4CAF50)   // green
     ToolGroup.SENSITIVE_READ -> Color(0xFFFF9800)  // orange
     ToolGroup.SENSITIVE_ACTION -> Color(0xFFF44336) // red
+}
+
+/** One Miuix icon per tool group, shown in the colored circle. */
+private fun groupIcon(g: ToolGroup): ImageVector = when (g) {
+    ToolGroup.TERMINAL_FILE -> MiuixIcons.File
+    ToolGroup.DEVICE_DIRECT -> MiuixIcons.Phone
+    ToolGroup.SENSITIVE_READ -> MiuixIcons.Search
+    ToolGroup.SENSITIVE_ACTION -> MiuixIcons.Play
 }
 
 /** Short Vietnamese description per tool (fallback: original English). */

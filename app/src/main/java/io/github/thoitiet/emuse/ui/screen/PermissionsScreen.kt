@@ -1,7 +1,9 @@
 package io.github.thoitiet.emuse.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,17 +12,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.thoitiet.emuse.ui.theme.StatusColors
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -32,6 +38,7 @@ data class PermRowState(
     val subtitle: String,
     val statusText: String,
     val ok: Boolean,
+    val icon: ImageVector,
     val iconColor: Color,
     val clickable: Boolean = true,
 )
@@ -53,6 +60,12 @@ fun PermissionsScreen(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
     ) {
+        item(key = "header") {
+            ScreenHeader(
+                title = "Quyền",
+                subtitle = "Trạng thái cấp quyền trên máy",
+            )
+        }
         item(key = "title-app") {
             SmallTitle(text = "Quyền ứng dụng")
         }
@@ -143,12 +156,21 @@ private fun PermRow(row: PermRowState, onClick: (() -> Unit)?) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Colored circle with first letter.
-        Text(
-            text = row.title.first().uppercase(),
-            color = row.iconColor,
-            modifier = Modifier.padding(end = 12.dp),
-        )
+        // Eta-style icon badge: tinted circle with the row's Miuix icon.
+        Box(
+            modifier = Modifier
+                .padding(end = 12.dp)
+                .size(36.dp)
+                .background(row.iconColor.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = row.icon,
+                contentDescription = null,
+                tint = row.iconColor,
+                modifier = Modifier.size(20.dp),
+            )
+        }
         Column(
             modifier = Modifier.weight(1f),
         ) {
