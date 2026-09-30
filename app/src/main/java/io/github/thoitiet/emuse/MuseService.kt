@@ -11,7 +11,9 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import io.github.thoitiet.emuse.exec.ScreenCapture
 import io.github.thoitiet.emuse.mcp.LocalHttpServer
@@ -39,6 +41,8 @@ class MuseService : Service() {
         @Volatile
         var running: Boolean = false
             private set
+
+        private const val TAG = "MuseService"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -46,6 +50,12 @@ class MuseService : Service() {
     private var localServer: LocalHttpServer? = null
     private var tunnel: TunnelManager? = null
     private var fgTypes = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+    /**
+     * True only when the user explicitly turned the service off (ACTION_STOP).
+     * Guards onTaskRemoved so a deliberate stop is never resurrected by a
+     * later swipe of the (already dead) task.
+     */
+    private var userStopped = false
 
     override fun onCreate() {
         super.onCreate()
@@ -159,9 +169,11 @@ class MuseService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            userStopped = true
             stopSelf()
             return START_NOT_STICKY
         }
+        userStopped = false
         if (intent?.action == ACTION_SET_TUNNEL) {
             setTunnelEnabled(intent.getBooleanExtra(EXTRA_TUNNEL_ENABLED, false))
             return START_STICKY
@@ -201,6 +213,29 @@ class MuseService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    /**
+     * The user swiped the app away from recents. On OnePlus/ColorOS this kills
+     * the process aggressively and the START_STICKY restart is often dropped or
+     * delayed for a very long time — the service, bubble and tunnel just vanish
+     * ("vuốt thoát app là mất luôn"). Actively revive the foreground service
+     * here so MCP + tunnel + bubble come back within seconds.
+     *
+     * A no-op when the user deliberately stopped the service first: after
+     * ACTION_STOP the service isn't running, so this callback won't fire; the
+     * userStopped flag only closes the race where stopSelf hasn't completed yet.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        if (userStopped) return
+        runCatching {
+            ContextCompat.startForegroundService(this, Intent(this, MuseService::class.java))
+        }.onFailure {
+            // Android 12+ may reject a background FGS start on some ROMs; the
+            // START_STICKY restart remains as fallback.
+            Log.w(TAG, "onTaskRemoved: self-restart rejected", it)
+        }
+    }
 
     override fun onDestroy() {
         running = false
