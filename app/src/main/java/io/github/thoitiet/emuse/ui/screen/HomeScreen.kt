@@ -44,11 +44,12 @@ fun HomeScreen(
     onOverlayToggle: (Boolean) -> Unit,
     onTunnelToggle: (Boolean) -> Unit,
     onTunnelUrlClick: () -> Unit,
+    topPadding: Dp = 0.dp,
     bottomPadding: Dp = 0.dp,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = bottomPadding),
+        contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
     ) {
         // ---- status card ----
         item(key = "status") {

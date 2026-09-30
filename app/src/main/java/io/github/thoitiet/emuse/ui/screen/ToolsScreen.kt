@@ -35,11 +35,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun ToolsScreen(
     groupEnabled: Map<ToolGroup, Boolean>,
     onGroupToggle: (ToolGroup, Boolean) -> Unit,
+    topPadding: Dp = 0.dp,
     bottomPadding: Dp = 0.dp,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = bottomPadding),
+        contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
     ) {
         for (g in ToolGroup.entries) {
             item(key = "title-${g.name}") {

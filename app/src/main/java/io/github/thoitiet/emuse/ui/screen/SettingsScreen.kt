@@ -50,6 +50,7 @@ fun SettingsScreen(
     tunnelHostState: TextFieldState,
     onTunnelToggle: (Boolean) -> Unit,
     onTunnelUrlClick: () -> Unit,
+    topPadding: Dp = 0.dp,
     bottomPadding: Dp = 0.dp,
 ) {
     // Miuix TextField uses value/onValueChange (not TextFieldState).
@@ -77,7 +78,7 @@ fun SettingsScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = bottomPadding),
+        contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
     ) {
         // ---- section: Truy cập ----
         item(key = "title-access") {

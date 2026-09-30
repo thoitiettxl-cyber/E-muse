@@ -1,6 +1,11 @@
-# E-Muse ProGuard rules.
+# E-Muse ProGuard rules (R8, release).
 #
-# minify is currently disabled (isMinifyEnabled = false), so these rules are
-# not applied. This file exists because build.gradle.kts references it via
-# proguardFiles(); without it the build would break the day minify is turned
-# on. Add real keep rules here if minification is ever enabled.
+# App dùng org.json (framework) thay vì reflection-based serialization,
+# không có custom Parcelable/Serializable class, reflection duy nhất là
+# HiddenApi.kt gọi method của framework (ApplicationInfo) nên R8 không
+# cần keep rule đặc biệt. Manifest components (Activity/Service/Receiver)
+# được AGP keep tự động.
+
+# Giữ tên class cho service/receiver tra cứu qua ComponentName.
+-keep class io.github.thoitiet.emuse.MuseAccessibilityService { *; }
+-keep class io.github.thoitiet.emuse.InstallReceiver { *; }

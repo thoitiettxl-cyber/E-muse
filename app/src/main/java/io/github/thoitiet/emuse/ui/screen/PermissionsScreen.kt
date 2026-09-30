@@ -46,11 +46,12 @@ fun PermissionsScreen(
     sysPerms: List<PermRowState>,
     rootState: PermRowState,
     onRowClick: (key: String) -> Unit,
+    topPadding: Dp = 0.dp,
     bottomPadding: Dp = 0.dp,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = bottomPadding),
+        contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
     ) {
         item(key = "title-app") {
             SmallTitle(text = "Quyền ứng dụng")

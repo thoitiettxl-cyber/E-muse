@@ -223,11 +223,13 @@ class MainActivity : ComponentActivity() {
                         onOverlayToggle = ::onOverlayToggle,
                         onTunnelToggle = ::onTunnelToggle,
                         onTunnelUrlClick = ::copyTunnelUrl,
+                        topPadding = padding.calculateTopPadding(),
                         bottomPadding = padding.calculateBottomPadding(),
                     )
                     1 -> ToolsScreen(
                         groupEnabled = groupEnabled,
                         onGroupToggle = ::onGroupToggle,
+                        topPadding = padding.calculateTopPadding(),
                         bottomPadding = padding.calculateBottomPadding(),
                     )
                     2 -> PermissionsScreen(
@@ -235,6 +237,7 @@ class MainActivity : ComponentActivity() {
                         sysPerms = sysPerms,
                         rootState = rootPermState,
                         onRowClick = ::onPermRowClick,
+                        topPadding = padding.calculateTopPadding(),
                         bottomPadding = padding.calculateBottomPadding(),
                     )
                     3 -> SettingsScreen(
@@ -244,6 +247,7 @@ class MainActivity : ComponentActivity() {
                         tunnelHostState = tunnelHostState,
                         onTunnelToggle = ::onTunnelToggle,
                         onTunnelUrlClick = ::copyTunnelUrl,
+                        topPadding = padding.calculateTopPadding(),
                         bottomPadding = padding.calculateBottomPadding(),
                     )
                 }
